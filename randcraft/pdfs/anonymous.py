@@ -131,7 +131,7 @@ class AnonymousDistributionFunction(ProbabilityDistributionFunction):
         step_size = x_values[1] - x_values[0]
         ser = pd.Series(index=x_values, data=kde(x_values))
         ser.loc[: self.min_value] = 0.0
-        ser.loc[self.max_value :] = 0.0
+        ser.loc[self.max_value:] = 0.0
         ser = ser / (ser.sum() * step_size)
         ser.plot(ax=ax, linestyle="dashed")
 
