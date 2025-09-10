@@ -5,6 +5,7 @@ description = "An object-oriented approach to defining and combining random vari
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "hatchling>=1.27.0",
     "matplotlib>=3.10.6",
     "pandas>=2.3.0",
     "scipy>=1.16.1",
@@ -17,6 +18,10 @@ dev = [
     "pytest>=8.4.2",
     "ruff>=0.13.0",
 ]
+
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
 
 [tool.ruff]
 extend-include = ['*.ipynb']

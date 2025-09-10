@@ -164,6 +164,21 @@ wheels = [
 ]
 
 [[package]]
+name = "hatchling"
+version = "1.27.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "pathspec" },
+    { name = "pluggy" },
+    { name = "trove-classifiers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/8a/cc1debe3514da292094f1c3a700e4ca25442489731ef7c0814358816bb03/hatchling-1.27.0.tar.gz", hash = "sha256:971c296d9819abb3811112fc52c7a9751c8d381898f36533bb16f9791e941fd6", size = 54983, upload-time = "2024-12-15T17:08:11.894Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/e7/ae38d7a6dfba0533684e0b2136817d667588ae3ec984c1a4e5df5eb88482/hatchling-1.27.0-py3-none-any.whl", hash = "sha256:d3a2f3567c4f926ea39849cdf924c7e99e6686c9c8e288ae1037c8fa2a5d937b", size = 75794, upload-time = "2024-12-15T17:08:10.364Z" },
+]
+
+[[package]]
 name = "iniconfig"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -573,8 +588,9 @@ wheels = [
 [[package]]
 name = "randcraft"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
+    { name = "hatchling" },
     { name = "matplotlib" },
     { name = "pandas" },
     { name = "scipy" },
@@ -590,6 +606,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "hatchling", specifier = ">=1.27.0" },
     { name = "matplotlib", specifier = ">=3.10.6" },
     { name = "pandas", specifier = ">=2.3.0" },
     { name = "scipy", specifier = ">=1.16.1" },
@@ -692,6 +709,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
+]
+
+[[package]]
+name = "trove-classifiers"
+version = "2025.9.9.12"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/db/52/45fa9c4f39ada33d803e4c0f288e94dc2e9d499201a0aa5697e30ef8a0cb/trove_classifiers-2025.9.9.12.tar.gz", hash = "sha256:6a00942fc023f4f383af3254b4ed818d7fa7923a3c7c03b0e71da2ce71b538ab", size = 16970, upload-time = "2025-09-09T12:23:47.737Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/15/05/618f6a55cced5402364af0d7629cbfd04e9852d464193bde9bd03c85b56a/trove_classifiers-2025.9.9.12-py3-none-any.whl", hash = "sha256:d449bd9d4715105657732d6dd1f46aa1595278d01ef1716ca164b35867135a4f", size = 14136, upload-time = "2025-09-09T12:23:46.314Z" },
 ]
 
 [[package]]
