@@ -3,6 +3,7 @@
 
 name: Python application
 
+
 on:
   push:
     branches: [ "main" ]
@@ -11,6 +12,7 @@ on:
 
 permissions:
   contents: read
+
 
 jobs:
   build:
