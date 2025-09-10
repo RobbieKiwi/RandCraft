@@ -48,25 +48,24 @@ rv2 = make_normal(mean=20.0, std_dev=10.0)
 # Combine them (e.g., sum)
 rv_sum = rv1 + rv2
 rv_sum.get_mean()
-# > 30.0
+# 30.0
 rv_sum.get_variance()
-# > 20.0
+# 200.0
 
 # Sample from the combined distribution
 samples = rv_sum.sample_one()
-# > 31.2541231
+# 31.2541231
 ```
 
 ## API Overview
 
-- `make_normal`, `make_uniform` ...: Create a random variable.
+- `make_normal`, `make_uniform` ...etc: Create a random variable.
 - Arithmetic operation on individual RVs with constants: `+`, `-`, `*`, `/`, `**`
 - Arithmetic operations: `+`, `-` between RVs.
 - `.sample_numpy(size)`: Draw samples.
 - `.get_mean()`, `.get_variance()`: Get statistics.
 - `.get_chance_that_rv_is_le(x)`: Evaluate cdf at point
 - `.get_value_that_is_at_le_chance(x)`: Evaluate inverse cdf at point
-- 
 
 ## Extending RandCraft
 
