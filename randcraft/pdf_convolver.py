@@ -1,16 +1,14 @@
-from typing import Union
-
 import numpy as np
 
-from random_variable.models import Statistics, sum_uncertain_floats, sort_uncertainties
-from random_variable.pdfs.anonymous import AnonymousDistributionFunction
-from random_variable.pdfs.base import (
+from randcraft.models import Statistics, sort_uncertainties, sum_uncertain_floats
+from randcraft.pdfs.anonymous import AnonymousDistributionFunction
+from randcraft.pdfs.base import (
     ProbabilityDistributionFunction,
     T_Pdf,
 )
-from random_variable.pdfs.discrete import DiscreteDistributionFunction
-from random_variable.pdfs.mixture import MixtureDistributionFunction
-from random_variable.pdfs.normal import NormalDistributionFunction
+from randcraft.pdfs.discrete import DiscreteDistributionFunction
+from randcraft.pdfs.mixture import MixtureDistributionFunction
+from randcraft.pdfs.normal import NormalDistributionFunction
 
 
 class PdfConvolver:
@@ -94,7 +92,7 @@ class PdfConvolver:
     @classmethod
     def convolve_with_discrete(
         cls, pdf_a: T_Pdf, discrete: DiscreteDistributionFunction
-    ) -> Union[T_Pdf, MixtureDistributionFunction]:
+    ) -> T_Pdf | MixtureDistributionFunction:
         assert isinstance(discrete, DiscreteDistributionFunction)
 
         # Shortcut for dirac delta
@@ -118,12 +116,14 @@ class PdfConvolver:
         stats = [pdf.statistics for pdf in pdfs]
         mean = sum_unc([s.mean for s in stats])
         variance = sum_unc([s.variance for s in stats])
+        second_moment = variance + mean.apply(lambda x: x**2)
+        # TODO calculate more moments
 
         min_value = sum_unc([s.min_value for s in stats])
         max_value = sum_unc([s.max_value for s in stats])
         min_value, max_value = sort_uncertainties([min_value, max_value])
 
-        statistics = Statistics(mean=mean, variance=variance, min_value=min_value, max_value=max_value)
+        statistics = Statistics(moments=[mean, second_moment], support=(min_value, max_value))
 
         def sampler(n: int) -> np.ndarray:
             samples = [p.sample_numpy(n) for p in pdfs]

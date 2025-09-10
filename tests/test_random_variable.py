@@ -2,13 +2,19 @@ from unittest import TestCase
 
 import numpy as np
 
-from random_variable import (
-    RandomVariable,
-    DiscreteDistributionFunction,
+from randcraft import (
+    make_anon,
+    make_dirac,
+    make_discrete,
+    make_normal,
+    make_uniform,
+)
+from randcraft.pdfs import (
     DiracDeltaDistributionFunction,
+    DiscreteDistributionFunction,
     MixtureDistributionFunction,
 )
-from random_variable import make_normal, make_uniform, make_dirac, make_anon, make_discrete
+from randcraft.random_variable import RandomVariable
 
 
 class TestRandomVariable(TestCase):

@@ -1,19 +1,19 @@
+from collections.abc import Callable
 from functools import cached_property
-from typing import Callable, Optional, Self
 
 import numpy as np
 import pandas as pd
 from matplotlib.axes import Axes
 from scipy.stats import gaussian_kde
 
-from random_variable.models import Statistics, Uncertainty, certainly, sort_uncertainties
-from random_variable.pdfs import DiracDeltaDistributionFunction
-from random_variable.pdfs.base import ProbabilityDistributionFunction
+from randcraft.models import Statistics, certainly, maybe, sort_uncertainties
+from randcraft.pdfs.base import ProbabilityDistributionFunction
+from randcraft.pdfs.discrete import DiracDeltaDistributionFunction
 
 
 class AnonymousDistributionFunction(ProbabilityDistributionFunction):
     def __init__(
-        self, sampler: Callable[[int], np.ndarray], n_samples: int = 10000, statistics: Optional[Statistics] = None
+        self, sampler: Callable[[int], np.ndarray], n_samples: int = 10000, statistics: Statistics | None = None
     ) -> None:
         self._sampler = sampler
         self._n_samples = n_samples
@@ -27,14 +27,15 @@ class AnonymousDistributionFunction(ProbabilityDistributionFunction):
     def statistics(self) -> Statistics:
         if self._external_statistics is not None:
             return self._external_statistics
+        variance = maybe(float(np.var(self._sorted_samples)))
+        mean = maybe(float(np.mean(self._sorted_samples)))
+        second_moment = variance + mean.apply(lambda x: x**2)
         return Statistics(
-            mean=Uncertainty(value=float(np.mean(self._sorted_samples)), is_certain=False),
-            variance=Uncertainty(value=float(np.var(self._sorted_samples)), is_certain=False),
-            min_value=Uncertainty(value=float(self._sorted_samples[0]), is_certain=False),
-            max_value=Uncertainty(value=float(self._sorted_samples[1]), is_certain=False),
+            moments=[mean, second_moment],
+            support=(maybe(float(self._sorted_samples[0])), maybe(float(self._sorted_samples[-1]))),
         )
 
-    def scale(self, x: float) -> Self:
+    def scale(self, x: float) -> "AnonymousDistributionFunction | DiracDeltaDistributionFunction":
         x = float(x)
         if x == 0.0:
             return DiracDeltaDistributionFunction(value=0.0)
@@ -43,10 +44,7 @@ class AnonymousDistributionFunction(ProbabilityDistributionFunction):
         new_min, new_max = sort_uncertainties(new_min_max)
 
         statistics = Statistics(
-            mean=self.stats.mean * x,
-            variance=self.stats.variance * (x**2),
-            min_value=new_min,
-            max_value=new_max,
+            moments=[m * x ** (k + 1) for k, m in enumerate(self.stats.moments)], support=(new_min, new_max)
         )
 
         def sampler(n: int) -> np.ndarray:
@@ -55,14 +53,15 @@ class AnonymousDistributionFunction(ProbabilityDistributionFunction):
 
         return AnonymousDistributionFunction(sampler=sampler, n_samples=self._n_samples, statistics=statistics)
 
-    def add_constant(self, x: float) -> Self:
+    def add_constant(self, x: float) -> "AnonymousDistributionFunction":
         certain_x = certainly(float(x))
-        statistics = Statistics(
-            mean=self.stats.mean + certain_x,
-            variance=self.stats.variance,
-            min_value=self.stats.min_value + certain_x,
-            max_value=self.stats.max_value + certain_x,
-        )
+        first_moment = self.stats.moments[0] + certain_x
+        second_moment = self.stats.moments[1] + self.stats.moments[0] * 2 + (certain_x**2)
+        # TODO add higher moments
+
+        new_support = (self.stats.support[0] + certain_x, self.stats.support[1] + certain_x)
+
+        statistics = Statistics(moments=[first_moment, second_moment], support=new_support)
 
         def sampler(n: int) -> np.ndarray:
             samples = self._sampler(n)
@@ -122,8 +121,8 @@ class AnonymousDistributionFunction(ProbabilityDistributionFunction):
             # Plot as discrete
             for x, c in zip(unique_samples, counts):
                 p = c / len(samples)
-                ax.vlines(x, 0, p, colors='C0', linewidth=2)
-                ax.scatter(x, p, color='C0', s=50, zorder=5)
+                ax.vlines(x, 0, p, colors="C0", linewidth=2)
+                ax.scatter(x, p, color="C0", s=50, zorder=5)
             return
 
         # Plot as continuous
@@ -134,7 +133,7 @@ class AnonymousDistributionFunction(ProbabilityDistributionFunction):
         ser.loc[: self.min_value] = 0.0
         ser.loc[self.max_value :] = 0.0
         ser = ser / (ser.sum() * step_size)
-        ser.plot(ax=ax, linestyle='dashed')
+        ser.plot(ax=ax, linestyle="dashed")
 
     def plot_cdf_on_axis(self, ax: Axes) -> None:
         start, end = self._get_plot_range()
@@ -142,5 +141,5 @@ class AnonymousDistributionFunction(ProbabilityDistributionFunction):
         x_values = np.concatenate(([start], x_values, [end]))
         cumulative_probs = np.concatenate(([0], cumulative_probs, [1]))
 
-        ax.step(x_values, cumulative_probs, where='post')
+        ax.step(x_values, cumulative_probs, where="post")
         ax.set_xlim(start, end)

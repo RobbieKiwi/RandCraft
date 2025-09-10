@@ -1,15 +1,14 @@
 from functools import cached_property
-from typing import Self, Optional
 
 import numpy as np
 from matplotlib.axes import Axes
 
-from random_variable.models import Statistics, Uncertainty
-from random_variable.pdfs.base import ProbabilityDistributionFunction
+from randcraft.models import Statistics, certainly
+from randcraft.pdfs.base import ProbabilityDistributionFunction
 
 
 class DiscreteDistributionFunction(ProbabilityDistributionFunction):
-    def __init__(self, values: list[float], probabilities: Optional[list[float]] = None) -> None:
+    def __init__(self, values: list[float], probabilities: list[float] | None = None) -> None:
         if probabilities is None:
             probabilities = [1.0 / len(values)] * len(values)
         assert len(values) == len(probabilities), "Values and probabilities must have the same length."
@@ -26,14 +25,9 @@ class DiscreteDistributionFunction(ProbabilityDistributionFunction):
 
     @cached_property
     def statistics(self) -> Statistics:
-        mean = np.sum(self._values * self._probabilities)
-        variance = np.sum((self._values - mean) ** 2 * self._probabilities)
-        return Statistics(
-            mean=Uncertainty(value=mean, is_certain=True),
-            variance=Uncertainty(value=variance, is_certain=True),
-            min_value=Uncertainty(value=np.min(self._values), is_certain=True),
-            max_value=Uncertainty(value=np.max(self._values), is_certain=True),
-        )
+        moments = [certainly(np.sum(self._values ** (k + 1) * self._probabilities)) for k in range(4)]
+        support = (certainly(float(np.min(self._values))), certainly(float(np.max(self._values))))
+        return Statistics(moments=moments, support=support)
 
     @cached_property
     def values(self) -> list[float]:
@@ -43,7 +37,7 @@ class DiscreteDistributionFunction(ProbabilityDistributionFunction):
     def probabilities(self) -> list[float]:
         return self._probabilities.tolist()
 
-    def scale(self, x: float) -> Self | "DiracDeltaDistributionFunction":
+    def scale(self, x: float) -> "DiscreteDistributionFunction | DiracDeltaDistributionFunction":
         x = float(x)
         if x == 0.0:
             return DiracDeltaDistributionFunction(value=0.0)
@@ -51,14 +45,15 @@ class DiscreteDistributionFunction(ProbabilityDistributionFunction):
             values=[float(v * x) for v in self._values], probabilities=self._probabilities.tolist()
         )
 
-    def add_constant(self, x: float) -> Self:
+    def add_constant(self, x: float) -> "DiscreteDistributionFunction":
         x = float(x)
         return DiscreteDistributionFunction(
             values=[float(v + x) for v in self._values], probabilities=self._probabilities.tolist()
         )
 
     def sample_numpy(self, n: int) -> np.ndarray:
-        return np.random.choice(self._values, size=n, p=self._probabilities)
+        rng = np.random.default_rng()
+        return rng.choice(self._values, size=n, p=self._probabilities)
 
     def chance_that_rv_is_le(self, value: float) -> float:
         return float(np.sum(self._probabilities[self._values <= value]))
@@ -78,8 +73,8 @@ class DiscreteDistributionFunction(ProbabilityDistributionFunction):
 
     def plot_pdf_on_axis(self, ax: Axes) -> None:
         for x, p in zip(self._values, self._probabilities):
-            ax.vlines(x, 0, p, colors='C0', linewidth=2)
-            ax.scatter(x, p, color='C0', s=50, zorder=5)
+            ax.vlines(x, 0, p, colors="C0", linewidth=2)
+            ax.scatter(x, p, color="C0", s=50, zorder=5)
         return
 
     def plot_cdf_on_axis(self, ax: Axes) -> None:
@@ -87,7 +82,7 @@ class DiscreteDistributionFunction(ProbabilityDistributionFunction):
         min_plot, max_plot = self._get_plot_range()
         cumulative_prob = np.concatenate(([0.0], cumulative_prob, [1.0]))
         values = np.concatenate(([min_plot], self._values, [max_plot]))
-        ax.step(values, cumulative_prob, where='post')
+        ax.step(values, cumulative_prob, where="post")
 
 
 class DiracDeltaDistributionFunction(DiscreteDistributionFunction):
@@ -100,18 +95,15 @@ class DiracDeltaDistributionFunction(DiscreteDistributionFunction):
 
     @cached_property
     def statistics(self) -> Statistics:
-        return Statistics(
-            mean=Uncertainty(value=self.value, is_certain=True),
-            variance=Uncertainty(value=0.0, is_certain=True),
-            min_value=Uncertainty(value=self.value, is_certain=True),
-            max_value=Uncertainty(value=self.value, is_certain=True),
-        )
+        moments = [certainly(self.value ** (k + 1)) for k in range(4)]
+        support = (certainly(float(self.value)), certainly(float(self.value)))
+        return Statistics(moments=moments, support=support)
 
     @cached_property
     def value(self) -> float:
         return float(self._values[0])
 
-    def scale(self, x: float) -> Self:
+    def scale(self, x: float) -> "DiracDeltaDistributionFunction":
         return DiracDeltaDistributionFunction(value=self.mean * x)
 
     def sample_numpy(self, n: int) -> np.ndarray:

@@ -1,13 +1,12 @@
 from functools import cached_property
-from typing import Self
 
 import numpy as np
 from matplotlib.axes import Axes
 
-from random_variable.models import Statistics, sum_uncertain_floats
-from random_variable.pdfs.anonymous import AnonymousDistributionFunction
-from random_variable.pdfs.base import ProbabilityDistributionFunction
-from random_variable.pdfs.discrete import DiracDeltaDistributionFunction
+from randcraft.models import Statistics, sum_uncertain_floats
+from randcraft.pdfs.anonymous import AnonymousDistributionFunction
+from randcraft.pdfs.base import ProbabilityDistributionFunction
+from randcraft.pdfs.discrete import DiracDeltaDistributionFunction
 
 
 class MixtureDistributionFunction(ProbabilityDistributionFunction):
@@ -39,10 +38,11 @@ class MixtureDistributionFunction(ProbabilityDistributionFunction):
     @cached_property
     def statistics(self) -> Statistics:
         mean = sum_uncertain_floats(pdf.statistics.mean * weight for pdf, weight in zip(self.pdfs, self.probabilities))
-        expectation_of_x_squared = sum_uncertain_floats(
-            pdf.statistics.expectation_of_x_squared * weight for pdf, weight in zip(self.pdfs, self.probabilities)
+        variance = sum_uncertain_floats(
+            pdf.statistics.variance * weight**2 for pdf, weight in zip(self.pdfs, self.probabilities)
         )
-        variance = expectation_of_x_squared - mean.apply(lambda x: x**2)
+        second_moment = variance + mean.apply(lambda x: x**2)
+        # TODO calculate more moments
 
         extreme_values = [pdf.statistics.min_value for pdf in self.pdfs] + [
             pdf.statistics.max_value for pdf in self.pdfs
@@ -51,10 +51,8 @@ class MixtureDistributionFunction(ProbabilityDistributionFunction):
         max_value = max(extreme_values, key=lambda x: x.value)
 
         return Statistics(
-            mean=mean,
-            variance=variance,
-            min_value=min_value,
-            max_value=max_value,
+            moments=[mean, second_moment],
+            support=(min_value, max_value),
         )
 
     @property
@@ -69,19 +67,20 @@ class MixtureDistributionFunction(ProbabilityDistributionFunction):
     def _anonymous_pdf(self) -> AnonymousDistributionFunction:
         return AnonymousDistributionFunction(sampler=self.sample_numpy, n_samples=10000, statistics=self.statistics)
 
-    def scale(self, x: float) -> Self | DiracDeltaDistributionFunction:
+    def scale(self, x: float) -> "MixtureDistributionFunction | DiracDeltaDistributionFunction":
         x = float(x)
         if x == 0.0:
             return DiracDeltaDistributionFunction(value=0.0)
         return MixtureDistributionFunction(pdfs=[pdf.scale(x) for pdf in self.pdfs], probabilities=self.probabilities)
 
-    def add_constant(self, x: float) -> Self:
+    def add_constant(self, x: float) -> "MixtureDistributionFunction":
         return MixtureDistributionFunction(
             pdfs=[pdf.add_constant(x) for pdf in self.pdfs], probabilities=self.probabilities
         )
 
     def sample_numpy(self, n: int) -> np.ndarray:
-        pdf_choices = np.random.choice(len(self.pdfs), size=n, p=self.probabilities)
+        rng = np.random.default_rng()
+        pdf_choices = rng.choice(len(self.pdfs), size=n, p=self.probabilities)
 
         samples = np.zeros(n)
         for i in range(len(self.pdfs)):

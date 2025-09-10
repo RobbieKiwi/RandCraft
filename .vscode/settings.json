@@ -1,0 +1,34 @@
+{
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./tests",
+        "-p",
+        "test*.py"
+    ],
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true,
+    "python.terminal.activateEnvironment": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.diagnosticMode": "workspace",
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "always",
+            "source.sortImports": "always",
+            "source.unusedImports": "always"
+        }
+    },
+    "autoDocstring.generateDocstringOnEnter": true,
+    "autoDocstring.docstringFormat": "google",
+    "terminal.integrated.env.windows": {
+        "PYTHONPATH": "${workspaceFolder}"
+    },
+    "workbench.tree.indent": 20,
+    "editor.semanticTokenColorCustomizations": {
+        "rules": {
+            "selfParameter": "#e181ff",
+            "clsParameter": "#e181ff",
+        }
+    }
+}
