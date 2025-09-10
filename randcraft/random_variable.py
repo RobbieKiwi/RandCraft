@@ -1,4 +1,4 @@
-from typing import Optional, Self, TypeVar, Union
+from typing import Self, TypeVar, Union
 
 import numpy as np
 
@@ -101,6 +101,6 @@ class RandomVariable:
         return self.__mul__(1.0 / factor)
 
     @classmethod
-    def mix_rvs(cls, rvs: list["RandomVariable"], probabilities: Optional[list[float]] = None) -> Self:
+    def mix_rvs(cls, rvs: list["RandomVariable"], probabilities: list[float] | None = None) -> Self:
         pdfs = [rv.pdf for rv in rvs]
         return RandomVariable(pdf=MixtureDistributionFunction(pdfs=pdfs, probabilities=probabilities))
