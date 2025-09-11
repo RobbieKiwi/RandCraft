@@ -1,12 +1,12 @@
 import numpy as np
 
-from randcraft.models import Statistics, sort_uncertainties, sum_uncertain_floats
+from randcraft.models import Statistics, sum_uncertain_floats
 from randcraft.pdfs.anonymous import AnonymousDistributionFunction
 from randcraft.pdfs.base import (
     ProbabilityDistributionFunction,
     T_Pdf,
 )
-from randcraft.pdfs.discrete import DiscreteDistributionFunction
+from randcraft.pdfs.discrete import DiracDeltaDistributionFunction, DiscreteDistributionFunction
 from randcraft.pdfs.mixture import MixtureDistributionFunction
 from randcraft.pdfs.normal import NormalDistributionFunction
 
@@ -96,7 +96,7 @@ class PdfConvolver:
         assert isinstance(discrete, DiscreteDistributionFunction)
 
         # Shortcut for dirac delta
-        if isinstance(discrete, DiscreteDistributionFunction) or len(discrete.values) == 1:
+        if isinstance(discrete, DiracDeltaDistributionFunction) or len(discrete.values) == 1:
             return pdf_a.add_constant(x=discrete.values[0])
 
         pdfs = [pdf_a.add_constant(di) for di in discrete.values]
@@ -121,7 +121,6 @@ class PdfConvolver:
 
         min_value = sum_unc([s.min_value for s in stats])
         max_value = sum_unc([s.max_value for s in stats])
-        min_value, max_value = sort_uncertainties([min_value, max_value])
 
         statistics = Statistics(moments=[mean, second_moment], support=(min_value, max_value))
 

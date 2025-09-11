@@ -2,13 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from randcraft import (
-    make_anon,
-    make_dirac,
-    make_discrete,
-    make_normal,
-    make_uniform,
-)
+from randcraft import make_anon, make_dirac, make_discrete, make_normal, make_uniform, make_dice_roll, make_coin_flip
 from randcraft.pdfs import (
     DiracDeltaDistributionFunction,
     DiscreteDistributionFunction,
@@ -229,6 +223,14 @@ class TestRandomVariable(TestCase):
         self.assertIsInstance(two_dice_and_one, RandomVariable)
         self.assertIsInstance(two_dice_and_one.pdf, DiscreteDistributionFunction)
         self.assertAlmostEqual(two_dice_and_one.get_mean(exact=True), 8.0)
+
+    def test_discrete_and_continuous_convolution(self) -> None:
+        coin_flip = make_coin_flip()
+        norm = make_normal(mean=0, std_dev=0.2)
+        combined = coin_flip + norm
+        print(combined)
+        self.assertEqual(combined.get_variance(), coin_flip.get_variance() + norm.get_variance())
+        self.assertEqual(combined.get_mean(), 0.5)
 
     def test_plotting(self) -> None:
         rv1 = make_normal(mean=0, std_dev=1)

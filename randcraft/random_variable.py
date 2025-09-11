@@ -84,6 +84,9 @@ class RandomVariable:
         new_pdf = PdfConvolver.convolve_pdfs(pdfs=[self.pdf, pdf])
         return RandomVariable(pdf=new_pdf)
 
+    def __radd__(self, other: Union["RandomVariable", float]) -> Self:
+        return self.__add__(other)
+
     def __sub__(self, other: Union["RandomVariable", float]) -> Self:
         # Assumes pdfs are not correlated
         assert isinstance(other, RandomVariable)

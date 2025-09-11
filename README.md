@@ -2,6 +2,27 @@
 
 RandCraft is a Python library for object-oriented combination and manipulation of univariate random variables, built on top of the [scipy.stats](https://docs.scipy.org/doc/scipy/reference/stats.html) module.
 
+
+## Usage Example
+Have you ever wanted to add together random variables but can't be bothered working out an analytical solution?
+Randcraft makes it simple.
+
+```python
+from randcraft import make_normal, make_coin_flip
+
+coin_flip = make_coin_flip()
+# <RandomVariable(discrete): mean=0.5, var=0.25>
+norm = make_normal(mean=0, std_dev=0.2)
+# <RandomVariable(normal): mean=0.0, var=0.04>
+combined = coin_flip + norm 
+# <RandomVariable(mixture): mean=0.5, var=0.29>
+combined.sample_one()
+# 0.8678903828104276
+combined.pdf.plot()
+```
+![Double normal](images/double_normal.png)
+
+
 ## Features
 
 - **Object-oriented random variables:** Wrap and combine distributions as Python objects.
@@ -36,26 +57,7 @@ You can also extend RandCraft with your own custom distributions.
 pip install randcraft
 ```
 
-## Usage Example
 
-```python
-from randcraft import make_normal
-
-# Create two random variables
-rv1 = make_normal(mean=10.0, std_dev=10.0)
-rv2 = make_normal(mean=20.0, std_dev=10.0)
-
-# Combine them (e.g., sum)
-rv_sum = rv1 + rv2
-rv_sum.get_mean()
-# 30.0
-rv_sum.get_variance()
-# 200.0
-
-# Sample from the combined distribution
-samples = rv_sum.sample_one()
-# 31.2541231
-```
 
 ## API Overview
 

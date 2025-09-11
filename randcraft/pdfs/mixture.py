@@ -38,10 +38,9 @@ class MixtureDistributionFunction(ProbabilityDistributionFunction):
     @cached_property
     def statistics(self) -> Statistics:
         mean = sum_uncertain_floats(pdf.statistics.mean * weight for pdf, weight in zip(self.pdfs, self.probabilities))
-        variance = sum_uncertain_floats(
-            pdf.statistics.variance * weight**2 for pdf, weight in zip(self.pdfs, self.probabilities)
+        second_moment = sum_uncertain_floats(
+            pdf.statistics.moments[1] * weight for pdf, weight in zip(self.pdfs, self.probabilities)
         )
-        second_moment = variance + mean.apply(lambda x: x**2)
         # TODO calculate more moments
 
         extreme_values = [pdf.statistics.min_value for pdf in self.pdfs] + [
