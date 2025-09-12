@@ -7,6 +7,7 @@ from randcraft.pdfs import (
     BetaDistributionFunction,
     DiracDeltaDistributionFunction,
     DiscreteDistributionFunction,
+    GammaDistributionFunction,
     NormalDistributionFunction,
     UniformDistributionFunction,
 )
@@ -18,9 +19,10 @@ __all__ = [
     "make_discrete",
     "make_dirac",
     "make_coin_flip",
-    "make_dice_roll",
+    "make_die_roll",
     "make_anon",
     "make_beta",
+    "make_gamma",
 ]
 
 
@@ -43,6 +45,12 @@ def make_beta(a: float | int, b: float | int) -> RandomVariable:
     return RandomVariable(pdf=BetaDistributionFunction(a=a, b=b))
 
 
+def make_gamma(shape: float | int, scale: float | int) -> RandomVariable:
+    shape = float(shape)
+    scale = float(scale)
+    return RandomVariable(pdf=GammaDistributionFunction(a=shape)) * scale
+
+
 # Discrete
 def make_discrete(values: list[float] | list[int], probabilities: list[float] | None = None) -> RandomVariable:
     # If probabilities are not provided, equal probabilities are assumed
@@ -59,7 +67,7 @@ def make_coin_flip() -> RandomVariable:
     return make_discrete(values=[0, 1], probabilities=[0.5, 0.5])
 
 
-def make_dice_roll(sides: int = 6) -> RandomVariable:
+def make_die_roll(sides: int = 6) -> RandomVariable:
     values = list(range(1, sides + 1))
     probabilities = [1 / sides] * sides
     return make_discrete(values=values, probabilities=probabilities)

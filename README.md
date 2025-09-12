@@ -22,14 +22,24 @@ combined.pdf.plot()
 ```
 ![Double normal](images/double_normal.png)
 
+## Another example
+```python
+from randcraft.constructors import make_die_roll
 
+die = make_die_roll(sides=6)
+# <RandomVariable(discrete): mean=3.5, var=2.92>
+three_dice = dice * 3
+# <RandomVariable(discrete): mean=10.5, var=26.2>
+three_dice.get_chance_that_rv_is_le(10.0)
+# 0.5
+```
 ## Features
 
 - **Object-oriented random variables:** Wrap and combine distributions as Python objects.
 - **Distribution composition:** Add, multiply, and transform random variables.
 - **Sampling and statistics:** Easily sample from composed distributions and compute statistics.
 - **Extensible:** Supports custom distributions via subclassing.
-- **Integration with scipy.stats:** Leverages the full power of scipy's probability distributions.
+- **Integration with scipy.stats:** Uses scipy under the hood
 
 ## Supported Distributions
 
@@ -38,15 +48,15 @@ RandCraft currently supports the following distributions:
 - Normal
 - Uniform
 - Beta
-- Anon: Anonymous distribution function based on a provided sampler function
+- Gamma
 - Discrete
 - DiracDelta
+- Anonymous distribution functions based on a provided sampler function
+- Mixture distributions
 - ...more coming soon!
 
 Distributions can all be combined arbitrarily with addition and subtraction.
 The library will simplify the new distribution analytically where possible, and use numerical approaches otherwise.
-
-Mixture distributions are also supported.
 
 You can also extend RandCraft with your own custom distributions.
 
@@ -65,6 +75,7 @@ pip install randcraft
 - `.get_mean()`, `.get_variance()`: Get statistics.
 - `.get_chance_that_rv_is_le(x)`: Evaluate cdf at point
 - `.get_value_that_is_at_le_chance(x)`: Evaluate inverse cdf at point
+- `.pdf.plot()`: Take a peek at your distribution
 
 ## Extending RandCraft
 

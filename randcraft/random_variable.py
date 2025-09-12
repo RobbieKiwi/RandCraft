@@ -1,4 +1,4 @@
-from typing import Self, TypeVar, Union
+from typing import TypeVar, Union
 
 import numpy as np
 
@@ -70,12 +70,12 @@ class RandomVariable:
     def sample_one(self) -> float:
         return self.sample_numpy(1).tolist()[0]
 
-    def add_special_event(self, value: float, chance: float) -> Self:
+    def add_special_event(self, value: float, chance: float) -> "RandomVariable":
         assert 0 <= chance <= 1.0, "Value must be between 0 and 1"
         dirac_rv = RandomVariable(DiracDeltaDistributionFunction(value=value))
         return self.mix_rvs(rvs=[self, dirac_rv], probabilities=[1.0 - chance, chance])
 
-    def __add__(self, other: Union["RandomVariable", float]) -> Self:
+    def __add__(self, other: Union["RandomVariable", float]) -> "RandomVariable":
         # Assumes pdfs are not correlated
         if not isinstance(other, RandomVariable):
             pdf = DiracDeltaDistributionFunction(value=float(other))
@@ -84,27 +84,29 @@ class RandomVariable:
         new_pdf = PdfConvolver.convolve_pdfs(pdfs=[self.pdf, pdf])
         return RandomVariable(pdf=new_pdf)
 
-    def __radd__(self, other: Union["RandomVariable", float]) -> Self:
+    def __radd__(self, other: Union["RandomVariable", float]) -> "RandomVariable":
         return self.__add__(other)
 
-    def __sub__(self, other: Union["RandomVariable", float]) -> Self:
+    def __sub__(self, other: Union["RandomVariable", float]) -> "RandomVariable":
         # Assumes pdfs are not correlated
         if not isinstance(other, RandomVariable):
             other = float(other)
         return self + (other * -1)
 
-    def __mul__(self, factor: float) -> Self:
+    def __mul__(self, factor: float) -> "RandomVariable":
+        if factor == 0.0:
+            return RandomVariable(DiracDeltaDistributionFunction(value=0.0))
         factor = float(factor)
         new_pdf = self.pdf.scale(x=factor)
         return RandomVariable(pdf=new_pdf)
 
-    def __rmul__(self, factor: float) -> Self:
+    def __rmul__(self, factor: float) -> "RandomVariable":
         return self.__mul__(factor)
 
-    def __truediv__(self, factor: float) -> Self:
+    def __truediv__(self, factor: float) -> "RandomVariable":
         return self.__mul__(1.0 / factor)
 
     @classmethod
-    def mix_rvs(cls, rvs: list["RandomVariable"], probabilities: list[float] | None = None) -> Self:
+    def mix_rvs(cls, rvs: list["RandomVariable"], probabilities: list[float] | None = None) -> "RandomVariable":
         pdfs = [rv.pdf for rv in rvs]
         return RandomVariable(pdf=MixtureDistributionFunction(pdfs=pdfs, probabilities=probabilities))

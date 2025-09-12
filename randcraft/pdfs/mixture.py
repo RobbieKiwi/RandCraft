@@ -6,7 +6,6 @@ from matplotlib.axes import Axes
 from randcraft.models import Statistics, sum_uncertain_floats
 from randcraft.pdfs.anonymous import AnonymousDistributionFunction
 from randcraft.pdfs.base import ProbabilityDistributionFunction
-from randcraft.pdfs.discrete import DiracDeltaDistributionFunction
 
 
 class MixtureDistributionFunction(ProbabilityDistributionFunction):
@@ -68,10 +67,8 @@ class MixtureDistributionFunction(ProbabilityDistributionFunction):
             sampler=self.sample_numpy, n_samples=10000, external_statistics=self.statistics
         )
 
-    def scale(self, x: float) -> "MixtureDistributionFunction | DiracDeltaDistributionFunction":
+    def scale(self, x: float) -> "MixtureDistributionFunction":
         x = float(x)
-        if x == 0.0:
-            return DiracDeltaDistributionFunction(value=0.0)
         return MixtureDistributionFunction(pdfs=[pdf.scale(x) for pdf in self.pdfs], probabilities=self.probabilities)
 
     def add_constant(self, x: float) -> "MixtureDistributionFunction":

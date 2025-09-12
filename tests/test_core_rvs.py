@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from randcraft import make_anon, make_dirac, make_discrete, make_normal, make_uniform
+from randcraft import make_anon, make_dirac, make_discrete, make_gamma, make_normal, make_uniform
 from randcraft.constructors import make_beta
 
 
@@ -65,6 +65,26 @@ class TestCoreRvs(TestCase):
         self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=0.0, exact=True), 0.0)
         self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=0.5, exact=True), 0.890625)
         self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=1.0, exact=True), 1.0)
+
+    def test_gamma_rv(self) -> None:
+        shape = 2.0
+        scale = 3.0
+
+        rv = make_gamma(shape=shape, scale=scale)
+
+        sample = rv.sample_one()
+        self.assertIsInstance(sample, float)
+        self.assertGreaterEqual(sample, 0.0)
+
+        samples = rv.sample_numpy(n=100)
+        self.assertIsInstance(samples, np.ndarray)
+        self.assertEqual(samples.shape, (100,))
+        self.assertGreaterEqual(min(samples), 0.0)
+
+        self.assertAlmostEqual(rv.get_mean(exact=True), shape * scale)
+        self.assertAlmostEqual(rv.get_variance(exact=True), shape * scale**2)
+        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=0.0, exact=True), 0.0)
+        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=shape * scale, exact=True), 0.5939941502901615)
 
     def test_dirac_delta_rv(self) -> None:
         value = 42.0
