@@ -5,15 +5,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 
-from randcraft.models import Statistics
+from randcraft.models import AlgebraicFunction, Statistics
 
 type PdfPlotType = Literal["pdf", "cdf", "both"]
 
 
 class ProbabilityDistributionFunction(ABC):
-    @classmethod
+    @property
     @abstractmethod
-    def get_short_name(cls) -> str: ...
+    def short_name(self) -> str: ...
 
     @property
     @abstractmethod
@@ -29,25 +29,54 @@ class ProbabilityDistributionFunction(ABC):
     def value_that_is_at_le_chance(self, chance: float) -> float: ...
 
     @abstractmethod
-    def plot_pdf_on_axis(self, ax: Axes) -> None: ...
+    def plot_pdf_on_axis(self, ax: Axes, af: AlgebraicFunction | None = None) -> None: ...
 
     @abstractmethod
-    def plot_cdf_on_axis(self, ax: Axes) -> None: ...
-
-    @abstractmethod
-    def scale(self, x: float) -> Self: ...
-
-    @abstractmethod
-    def add_constant(self, x: float) -> Self: ...
+    def plot_cdf_on_axis(self, ax: Axes, af: AlgebraicFunction | None = None) -> None: ...
 
     @abstractmethod
     def _get_plot_range(self) -> tuple[float, float]: ...
+
+    @abstractmethod
+    def copy(self) -> Self: ...
 
     def __str__(self) -> str:
         return f"<{self.__class__.__name__}(mean={self.mean}, variance={self.variance})>"
 
     def __repr__(self) -> str:
         return str(self)
+
+    @property
+    def stats(self) -> Statistics:
+        return self.statistics
+
+    @property
+    def mean(self) -> float:
+        return self.stats.mean.value
+
+    @property
+    def variance(self) -> float:
+        return self.stats.variance.value
+
+    @property
+    def std_dev(self) -> float:
+        return self.stats.std_dev.value
+
+    @property
+    def min_value(self) -> float:
+        return self.stats.min_value.value
+
+    @property
+    def max_value(self) -> float:
+        return self.stats.max_value.value
+
+    def scale(self, x: float) -> "ProbabilityDistributionFunction":
+        # Override these if possible
+        return ScaledDistributionFunction(inner=self.copy(), algebraic_function=AlgebraicFunction(scale=x))
+
+    def add_constant(self, x: float) -> "ProbabilityDistributionFunction":
+        # Override these if possible
+        return ScaledDistributionFunction(inner=self.copy(), algebraic_function=AlgebraicFunction(offset=x))
 
     def plot(self, kind: PdfPlotType = "both") -> None:
         v_lines = [(self.mean, "red", "mean")]
@@ -57,10 +86,10 @@ class ProbabilityDistributionFunction(ABC):
 
         def _plot(is_cumulative: bool, ax: Axes) -> None:
             if is_cumulative:
-                self.plot_cdf_on_axis(ax)
+                self.plot_cdf_on_axis(ax=ax)
                 ax.set_title("CDF")
             else:
-                self.plot_pdf_on_axis(ax)
+                self.plot_pdf_on_axis(ax=ax)
                 ax.set_title("PDF")
             ax.set_xlabel("x")
             ax.set_xlim(self._get_plot_range())
@@ -92,29 +121,56 @@ class ProbabilityDistributionFunction(ABC):
         fig.set_size_inches(10, 6)
         plt.show()
 
-    @property
-    def stats(self) -> Statistics:
-        return self.statistics
+
+class ScaledDistributionFunction(ProbabilityDistributionFunction):
+    def __init__(self, inner: ProbabilityDistributionFunction, algebraic_function: AlgebraicFunction) -> None:
+        self._inner = inner
+        self._af = algebraic_function
 
     @property
-    def mean(self) -> float:
-        return self.stats.mean.value
+    def inner(self) -> ProbabilityDistributionFunction:
+        return self._inner
 
     @property
-    def variance(self) -> float:
-        return self.stats.variance.value
+    def algebraic_function(self) -> AlgebraicFunction:
+        return self._af
 
     @property
-    def std_dev(self) -> float:
-        return self.stats.std_dev.value
+    def short_name(self) -> str:
+        return self.inner.short_name + "*"
 
     @property
-    def min_value(self) -> float:
-        return self.stats.min_value.value
+    def statistics(self) -> Statistics:
+        return self.inner.statistics.apply_algebraic_function(self.algebraic_function)
 
-    @property
-    def max_value(self) -> float:
-        return self.stats.max_value.value
+    def scale(self, x: float) -> "ScaledDistributionFunction":
+        return ScaledDistributionFunction(inner=self.inner, algebraic_function=self.algebraic_function * x)
+
+    def add_constant(self, x: float) -> "ScaledDistributionFunction":
+        return ScaledDistributionFunction(inner=self.inner, algebraic_function=self.algebraic_function + x)
+
+    def sample_numpy(self, n: int) -> np.ndarray:
+        return self.algebraic_function.apply(self.inner.sample_numpy(n))
+
+    def chance_that_rv_is_le(self, value: float) -> float:
+        scaled_v = self.algebraic_function.apply_inverse(value)
+        return self.inner.chance_that_rv_is_le(scaled_v)
+
+    def value_that_is_at_le_chance(self, chance: float) -> float:
+        inner_value = self.inner.value_that_is_at_le_chance(chance)
+        return self.algebraic_function.apply(inner_value)
+
+    def plot_pdf_on_axis(self, ax: Axes, af: AlgebraicFunction | None = None) -> None:
+        return self.inner.plot_pdf_on_axis(ax=ax, af=self.algebraic_function)
+
+    def plot_cdf_on_axis(self, ax: Axes, af: AlgebraicFunction | None = None) -> None:
+        return self.inner.plot_cdf_on_axis(ax=ax, af=self.algebraic_function)
+
+    def _get_plot_range(self) -> tuple[float, float]:
+        return self.algebraic_function.apply_on_range(self.inner._get_plot_range())
+
+    def copy(self) -> "ScaledDistributionFunction":
+        return ScaledDistributionFunction(inner=self.inner.copy(), algebraic_function=self.algebraic_function)
 
 
 T_Pdf = TypeVar("T_Pdf", bound=ProbabilityDistributionFunction)

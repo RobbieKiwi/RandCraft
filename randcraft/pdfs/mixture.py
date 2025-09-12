@@ -31,8 +31,8 @@ class MixtureDistributionFunction(ProbabilityDistributionFunction):
         total_weight = sum(probabilities)
         assert abs(total_weight - 1.0) < 1e-9, "Weights must sum to 1"
 
-    @classmethod
-    def get_short_name(cls) -> str:
+    @property
+    def short_name(self) -> str:
         return "mixture"
 
     @cached_property
@@ -64,7 +64,9 @@ class MixtureDistributionFunction(ProbabilityDistributionFunction):
 
     @cached_property
     def _anonymous_pdf(self) -> AnonymousDistributionFunction:
-        return AnonymousDistributionFunction(sampler=self.sample_numpy, n_samples=10000, statistics=self.statistics)
+        return AnonymousDistributionFunction(
+            sampler=self.sample_numpy, n_samples=10000, external_statistics=self.statistics
+        )
 
     def scale(self, x: float) -> "MixtureDistributionFunction | DiracDeltaDistributionFunction":
         x = float(x)
@@ -120,3 +122,6 @@ class MixtureDistributionFunction(ProbabilityDistributionFunction):
         probabilities = [self.chance_that_rv_is_le(value=float(x)) for x in x_values]
         ax.plot(x_values, probabilities)
         ax.set_xlim(start, end)
+
+    def copy(self) -> "MixtureDistributionFunction":
+        return MixtureDistributionFunction(pdfs=self.pdfs, probabilities=self.probabilities)

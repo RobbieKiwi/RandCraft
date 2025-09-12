@@ -19,8 +19,8 @@ class DiscreteDistributionFunction(ProbabilityDistributionFunction):
         self._values = np.array(values)
         self._probabilities = np.array(probabilities)
 
-    @classmethod
-    def get_short_name(cls) -> str:
+    @property
+    def short_name(self) -> str:
         return "discrete"
 
     @cached_property
@@ -84,13 +84,16 @@ class DiscreteDistributionFunction(ProbabilityDistributionFunction):
         values = np.concatenate(([min_plot], self._values, [max_plot]))
         ax.step(values, cumulative_prob, where="post")
 
+    def copy(self) -> "DiscreteDistributionFunction":
+        return DiscreteDistributionFunction(values=self.values, probabilities=self.probabilities)
+
 
 class DiracDeltaDistributionFunction(DiscreteDistributionFunction):
     def __init__(self, value: float) -> None:
         super().__init__(values=[value])
 
-    @classmethod
-    def get_short_name(cls) -> str:
+    @property
+    def short_name(self) -> str:
         return "dirac"
 
     @cached_property
@@ -106,6 +109,9 @@ class DiracDeltaDistributionFunction(DiscreteDistributionFunction):
     def scale(self, x: float) -> "DiracDeltaDistributionFunction":
         return DiracDeltaDistributionFunction(value=self.mean * x)
 
+    def add_constant(self, x: float) -> DiscreteDistributionFunction:
+        return DiracDeltaDistributionFunction(value=self.mean + x)
+
     def sample_numpy(self, n: int) -> np.ndarray:
         return np.ones(n) * self.value
 
@@ -114,3 +120,6 @@ class DiracDeltaDistributionFunction(DiscreteDistributionFunction):
 
     def value_that_is_at_le_chance(self, chance: float) -> float:
         return self.value
+
+    def copy(self) -> "DiracDeltaDistributionFunction":
+        return DiracDeltaDistributionFunction(value=self.value)

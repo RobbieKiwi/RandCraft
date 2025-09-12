@@ -6,21 +6,23 @@ import pandas as pd
 from matplotlib.axes import Axes
 from scipy.stats import gaussian_kde
 
-from randcraft.models import Statistics, certainly, maybe, sort_uncertainties
+from randcraft.models import AlgebraicFunction, Statistics, maybe
 from randcraft.pdfs.base import ProbabilityDistributionFunction
-from randcraft.pdfs.discrete import DiracDeltaDistributionFunction
 
 
 class AnonymousDistributionFunction(ProbabilityDistributionFunction):
     def __init__(
-        self, sampler: Callable[[int], np.ndarray], n_samples: int = 10000, statistics: Statistics | None = None
+        self,
+        sampler: Callable[[int], np.ndarray],
+        n_samples: int = 10000,
+        external_statistics: Statistics | None = None,
     ) -> None:
         self._sampler = sampler
         self._n_samples = n_samples
-        self._external_statistics = statistics
+        self._external_statistics = external_statistics
 
-    @classmethod
-    def get_short_name(cls) -> str:
+    @property
+    def short_name(self) -> str:
         return "anon"
 
     @cached_property
@@ -34,40 +36,6 @@ class AnonymousDistributionFunction(ProbabilityDistributionFunction):
             moments=[mean, second_moment],
             support=(maybe(float(self._sorted_samples[0])), maybe(float(self._sorted_samples[-1]))),
         )
-
-    def scale(self, x: float) -> "AnonymousDistributionFunction | DiracDeltaDistributionFunction":
-        x = float(x)
-        if x == 0.0:
-            return DiracDeltaDistributionFunction(value=0.0)
-
-        new_min_max = (self.stats.min_value * x, self.stats.max_value * x)
-        new_min, new_max = sort_uncertainties(new_min_max)
-
-        statistics = Statistics(
-            moments=[m * x ** (k + 1) for k, m in enumerate(self.stats.moments)], support=(new_min, new_max)
-        )
-
-        def sampler(n: int) -> np.ndarray:
-            samples = self._sampler(n)
-            return samples * x
-
-        return AnonymousDistributionFunction(sampler=sampler, n_samples=self._n_samples, statistics=statistics)
-
-    def add_constant(self, x: float) -> "AnonymousDistributionFunction":
-        certain_x = certainly(float(x))
-        first_moment = self.stats.moments[0] + certain_x
-        second_moment = self.stats.moments[1] + self.stats.moments[0] * 2 + (certain_x**2)
-        # TODO add higher moments
-
-        new_support = (self.stats.support[0] + certain_x, self.stats.support[1] + certain_x)
-
-        statistics = Statistics(moments=[first_moment, second_moment], support=new_support)
-
-        def sampler(n: int) -> np.ndarray:
-            samples = self._sampler(n)
-            return samples + x
-
-        return AnonymousDistributionFunction(sampler=sampler, n_samples=self._n_samples, statistics=statistics)
 
     def sample_numpy(self, n: int) -> np.ndarray:
         return self._sampler(n)
@@ -112,9 +80,16 @@ class AnonymousDistributionFunction(ProbabilityDistributionFunction):
         end = max_value + 0.1 * low_high_range
         return start, end
 
-    def plot_pdf_on_axis(self, ax: Axes) -> None:
-        start, end = self._get_plot_range()
-        samples = self._sorted_samples
+    def plot_pdf_on_axis(self, ax: Axes, af: AlgebraicFunction | None = None) -> None:
+        if af is not None:
+            start, end = af.apply_on_range(self._get_plot_range())
+            samples = np.sort(af.apply(self._sorted_samples))
+            min_value, max_value = af.apply_on_range((self.min_value, self.max_value))
+        else:
+            start, end = self._get_plot_range()
+            samples = self._sorted_samples
+            min_value, max_value = self.min_value, self.max_value
+
         unique_samples, counts = np.unique(samples, return_counts=True)
 
         if len(unique_samples) < 0.25 * len(samples):
@@ -130,16 +105,27 @@ class AnonymousDistributionFunction(ProbabilityDistributionFunction):
         x_values = np.linspace(start, end, 1000)
         step_size = x_values[1] - x_values[0]
         ser = pd.Series(index=x_values, data=kde(x_values))
-        ser.loc[: self.min_value] = 0.0
-        ser.loc[self.max_value :] = 0.0
+        ser.loc[:min_value] = 0.0
+        ser.loc[max_value:] = 0.0
         ser = ser / (ser.sum() * step_size)
         ser.plot(ax=ax, linestyle="dashed")
 
-    def plot_cdf_on_axis(self, ax: Axes) -> None:
-        start, end = self._get_plot_range()
-        x_values, cumulative_probs = self.cdf
+    def plot_cdf_on_axis(self, ax: Axes, af: AlgebraicFunction | None = None) -> None:
+        if af is not None:
+            start, end = af.apply_on_range(self._get_plot_range())
+            x_values = np.sort(af.apply(self._sorted_samples))
+            cumulative_probs = np.arange(1, len(x_values) + 1) / len(x_values)
+        else:
+            start, end = self._get_plot_range()
+            x_values, cumulative_probs = self.cdf
+
         x_values = np.concatenate(([start], x_values, [end]))
         cumulative_probs = np.concatenate(([0], cumulative_probs, [1]))
 
         ax.step(x_values, cumulative_probs, where="post")
         ax.set_xlim(start, end)
+
+    def copy(self) -> "AnonymousDistributionFunction":
+        return AnonymousDistributionFunction(
+            sampler=self._sampler, n_samples=self._n_samples, external_statistics=self._external_statistics
+        )

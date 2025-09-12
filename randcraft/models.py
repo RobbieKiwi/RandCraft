@@ -1,7 +1,9 @@
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Literal, TypeVar
+from typing import Literal, Protocol, TypeVar, runtime_checkable
+
+import numpy as np
 
 T = TypeVar("T")
 
@@ -117,3 +119,65 @@ class Statistics:
             "max_value": self.max_value,
         }[name]
         return uncertainty.get(name=name, certain=certain)
+
+    def apply_algebraic_function(self, af: "AlgebraicFunction") -> "Statistics":
+        scale = af.scale
+        offset = af.offset
+        new_min_max = (self.min_value * scale + offset, self.max_value * scale + offset)
+        new_min, new_max = sort_uncertainties(new_min_max)
+
+        mean = self.mean * scale + offset
+        variance = self.variance * (scale**2)
+        second_moment = variance + mean**2
+        moments = [mean, second_moment]
+        # TODO calculate higher order moments
+
+        return Statistics(moments=moments, support=(new_min, new_max))
+
+
+@runtime_checkable
+class SupportsFloatAlgebra(Protocol):
+    def __add__(self: T, x: float, /) -> T: ...
+    def __radd__(self: T, x: float, /) -> T: ...
+    def __sub__(self: T, x: float, /) -> T: ...
+    def __rsub__(self: T, x: float, /) -> T: ...
+    def __mul__(self: T, x: float, /) -> T: ...
+    def __rmul__(self: T, x: float, /) -> T: ...
+    def __truediv__(self: T, x: float, /) -> T: ...
+
+
+F = TypeVar("F", bound=SupportsFloatAlgebra)
+
+
+@dataclass(frozen=True)
+class AlgebraicFunction:
+    scale: float = 1.0
+    offset: float = 0.0
+
+    @cached_property
+    def is_active(self) -> bool:
+        return self.scale != 1.0 or self.offset != 0.0
+
+    def __mul__(self, factor: float) -> "AlgebraicFunction":
+        factor = float(factor)
+        return AlgebraicFunction(scale=self.scale * factor, offset=self.offset * factor)
+
+    def __rmul__(self, factor: float) -> "AlgebraicFunction":
+        return self.__mul__(factor)
+
+    def __add__(self, addend: float) -> "AlgebraicFunction":
+        addend = float(addend)
+        return AlgebraicFunction(scale=self.scale, offset=self.offset + addend)
+
+    def __radd__(self, addend: float) -> "AlgebraicFunction":
+        return self.__add__(addend)
+
+    def apply(self, x: F) -> F:
+        return self.scale * x + self.offset
+
+    def apply_inverse(self, y: F) -> F:
+        return (y - self.offset) / self.scale
+
+    def apply_on_range(self, x_range: tuple[float, float]) -> tuple[float, float]:
+        processed = self.apply(np.array(x_range))
+        return float(np.min(processed)), float(np.max(processed))

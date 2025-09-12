@@ -23,7 +23,7 @@ class RandomVariable:
     def __str__(self) -> str:
         mean = float(np.format_float_positional(x=self.statistics.mean.value, precision=3, fractional=False))
         var = float(np.format_float_positional(x=self.statistics.variance.value, precision=3, fractional=False))
-        name = self.pdf.get_short_name()
+        name = self.pdf.short_name
         return f"<{self.__class__.__name__}({name}): {mean=}, {var=}>"
 
     def __repr__(self) -> str:
@@ -52,14 +52,14 @@ class RandomVariable:
     def get_chance_that_rv_is_le(self, value: float, exact: bool = False) -> float:
         if exact and isinstance(self.pdf, AnonymousDistributionFunction):
             # TODO Move this certainty logic inside the pdf subclasses
-            name = AnonymousDistributionFunction.get_short_name()
+            name = AnonymousDistributionFunction.short_name
             raise ValueError(f"Exact CDF calculation is not supported for {name} distributions.")
         return self.pdf.chance_that_rv_is_le(value=value)
 
     def get_value_that_is_at_le_chance(self, chance: float, exact: bool = False) -> float:
         if exact and isinstance(self.pdf, AnonymousDistributionFunction):
             # TODO Move this certainty logic inside the pdf subclasses
-            name = AnonymousDistributionFunction.get_short_name()
+            name = AnonymousDistributionFunction.short_name
             raise ValueError(f"Exact quantile calculation is not supported for {name} distributions.")
         assert 0.0 <= chance <= 1.0, "Chance must be between 0 and 1."
         return self.pdf.value_that_is_at_le_chance(chance=chance)
@@ -89,7 +89,8 @@ class RandomVariable:
 
     def __sub__(self, other: Union["RandomVariable", float]) -> Self:
         # Assumes pdfs are not correlated
-        assert isinstance(other, RandomVariable)
+        if not isinstance(other, RandomVariable):
+            other = float(other)
         return self + (other * -1)
 
     def __mul__(self, factor: float) -> Self:

@@ -128,4 +128,4 @@ class PdfConvolver:
             samples = [p.sample_numpy(n) for p in pdfs]
             return np.sum(samples, axis=0)
 
-        return AnonymousDistributionFunction(sampler=sampler, n_samples=5000, statistics=statistics)
+        return AnonymousDistributionFunction(sampler=sampler, n_samples=5000, external_statistics=statistics)
