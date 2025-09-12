@@ -37,10 +37,8 @@ class DiscreteDistributionFunction(ProbabilityDistributionFunction):
     def probabilities(self) -> list[float]:
         return self._probabilities.tolist()
 
-    def scale(self, x: float) -> "DiscreteDistributionFunction | DiracDeltaDistributionFunction":
+    def scale(self, x: float) -> "DiscreteDistributionFunction":
         x = float(x)
-        if x == 0.0:
-            return DiracDeltaDistributionFunction(value=0.0)
         return DiscreteDistributionFunction(
             values=[float(v * x) for v in self._values], probabilities=self._probabilities.tolist()
         )

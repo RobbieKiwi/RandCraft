@@ -1,22 +1,26 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from functools import cached_property
 
 import numpy as np
 from matplotlib.axes import Axes
-from scipy.stats._distn_infrastructure import rv_continuous_frozen
+from scipy.stats._distn_infrastructure import rv_continuous_frozen, rv_discrete_frozen
 
 from randcraft.models import AlgebraicFunction, Statistics, certainly
-from randcraft.pdfs.continuous import ContinuousDistributionFunction
+from randcraft.pdfs.base import ProbabilityDistributionFunction
 
 
-class ScipyDistributionFunction(ContinuousDistributionFunction, ABC):
+class ScipyDistributionFunction(ProbabilityDistributionFunction, ABC):
+    def __init__(self, scipy_rv: rv_continuous_frozen | rv_discrete_frozen) -> None:
+        # It really should be continuous, but the typing here helps to interface with strange scipy typing
+        assert isinstance(scipy_rv, rv_continuous_frozen)
+        self._scipy_rv = scipy_rv
+
     @property
-    @abstractmethod
     def scipy_rv(self) -> rv_continuous_frozen:
-        pass
+        return self._scipy_rv
 
     @cached_property
-    def statistics(self) -> Statistics:  # type: ignore
+    def statistics(self) -> Statistics:
         support = self.scipy_rv.support()
         lower = float(support[0])
         upper = float(support[1])
@@ -36,8 +40,14 @@ class ScipyDistributionFunction(ContinuousDistributionFunction, ABC):
         return float(self.scipy_rv.ppf(q=chance))
 
     def _get_plot_range(self) -> tuple[float, float]:
-        start = self.mean - 4 * self.std_dev
-        end = self.mean + 4 * self.std_dev
+        if not np.isinf(self.min_value):
+            start = self.min_value
+        else:
+            start = self.mean - 4 * self.std_dev
+        if not np.isinf(self.max_value):
+            end = self.max_value
+        else:
+            end = self.mean + 4 * self.std_dev
         return start, end
 
     def plot_pdf_on_axis(self, ax: Axes, af: AlgebraicFunction | None = None) -> None:

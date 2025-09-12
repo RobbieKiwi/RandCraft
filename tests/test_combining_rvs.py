@@ -3,7 +3,7 @@ from unittest import TestCase
 import numpy as np
 
 from randcraft import make_anon, make_coin_flip, make_dirac, make_discrete, make_normal, make_uniform
-from randcraft.constructors import make_beta
+from randcraft.constructors import make_beta, make_die_roll
 from randcraft.pdfs import (
     DiracDeltaDistributionFunction,
     DiscreteDistributionFunction,
@@ -169,3 +169,9 @@ class TestCombiningRvs(TestCase):
 
         self.assertIsInstance(new_rv, RandomVariable)
         self.assertAlmostEqual(new_rv.get_mean(), 1.5)
+
+    def test_three_dice(self) -> None:
+        dice = make_die_roll(sides=6)
+        three_dice = dice + dice + dice
+        result = three_dice.get_chance_that_rv_is_le(10.0)
+        self.assertEqual(result, 0.5)

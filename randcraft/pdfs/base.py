@@ -70,11 +70,11 @@ class ProbabilityDistributionFunction(ABC):
     def max_value(self) -> float:
         return self.stats.max_value.value
 
-    def scale(self, x: float) -> "ProbabilityDistributionFunction":
+    def scale(self, x: float) -> Self | "ScaledDistributionFunction":
         # Override these if possible
         return ScaledDistributionFunction(inner=self.copy(), algebraic_function=AlgebraicFunction(scale=x))
 
-    def add_constant(self, x: float) -> "ProbabilityDistributionFunction":
+    def add_constant(self, x: float) -> Self | "ScaledDistributionFunction":
         # Override these if possible
         return ScaledDistributionFunction(inner=self.copy(), algebraic_function=AlgebraicFunction(offset=x))
 
@@ -126,6 +126,7 @@ class ScaledDistributionFunction(ProbabilityDistributionFunction):
     def __init__(self, inner: ProbabilityDistributionFunction, algebraic_function: AlgebraicFunction) -> None:
         self._inner = inner
         self._af = algebraic_function
+        assert self.algebraic_function.scale != 0.0, "Scale cannot be zero"
 
     @property
     def inner(self) -> ProbabilityDistributionFunction:

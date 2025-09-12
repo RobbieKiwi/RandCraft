@@ -22,7 +22,7 @@ class TestPlotting(TestCase):
         mixed = RandomVariable.mix_rvs([rv1, rv2, combined, discrete])
         mixed.pdf.plot()
 
-    def test_scaled_scaled(self) -> None:
+    def test_scaled_plotting(self) -> None:
         a = 2.0
         b = 5.0
 
