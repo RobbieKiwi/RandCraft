@@ -33,16 +33,15 @@ combined.pdf.plot()
 
 ## Supported Distributions
 
-RandCraft currently supports distributions available in `scipy.stats`, including:
+RandCraft currently supports the following distributions:
 
-- Normal (`norm`)
-- Uniform (`uniform`)
-- ...more coming soon!
-
-Also included are:
+- Normal
+- Uniform
+- Beta
 - Anon: Anonymous distribution function based on a provided sampler function
 - Discrete
 - DiracDelta
+- ...more coming soon!
 
 Distributions can all be combined arbitrarily with addition and subtraction.
 The library will simplify the new distribution analytically where possible, and use numerical approaches otherwise.
@@ -57,8 +56,6 @@ You can also extend RandCraft with your own custom distributions.
 pip install randcraft
 ```
 
-
-
 ## API Overview
 
 - `make_normal`, `make_uniform` ...etc: Create a random variable.
@@ -72,6 +69,10 @@ pip install randcraft
 ## Extending RandCraft
 
 You can create custom random variable classes by subclassing the base RV class and implementing required methods.
+
+## Known limitations
+
+The library is designed to work with univariate random variabels only. Multi-dimensional rvs or correlations etc are not supported.
 
 ## License
 
