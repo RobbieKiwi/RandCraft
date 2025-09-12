@@ -5,11 +5,11 @@ import numpy as np
 from matplotlib.axes import Axes
 from scipy.stats._distn_infrastructure import rv_continuous_frozen
 
-from randcraft.models import Statistics, certainly
-from randcraft.pdfs.base import ProbabilityDistributionFunction
+from randcraft.models import AlgebraicFunction, Statistics, certainly
+from randcraft.pdfs.continuous import ContinuousDistributionFunction
 
 
-class ScipyDistributionFunction(ProbabilityDistributionFunction, ABC):
+class ScipyDistributionFunction(ContinuousDistributionFunction, ABC):
     @property
     @abstractmethod
     def scipy_rv(self) -> rv_continuous_frozen:
@@ -40,12 +40,23 @@ class ScipyDistributionFunction(ProbabilityDistributionFunction, ABC):
         end = self.mean + 4 * self.std_dev
         return start, end
 
-    def plot_pdf_on_axis(self, ax: Axes) -> None:
+    def plot_pdf_on_axis(self, ax: Axes, af: AlgebraicFunction | None = None) -> None:
         start, end = self._get_plot_range()
         x = np.linspace(start, end, 1000)
-        ax.plot(x, self.scipy_rv.pdf(x))
+        y = self.scipy_rv.pdf(x)
 
-    def plot_cdf_on_axis(self, ax: Axes) -> None:
+        if af is not None:
+            x = af.apply(x)
+            y = y / abs(af.scale)
+        ax.plot(x, y)
+
+    def plot_cdf_on_axis(self, ax: Axes, af: AlgebraicFunction | None = None) -> None:
         start, end = self._get_plot_range()
         x = np.linspace(start, end, 1000)
-        ax.plot(x, self.scipy_rv.cdf(x))
+        y = self.scipy_rv.cdf(x)
+
+        if af is not None:
+            x = af.apply(x)
+            if af.scale < 0:
+                y = 1 - y
+        ax.plot(x, y)

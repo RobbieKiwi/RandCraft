@@ -2,99 +2,30 @@ from unittest import TestCase
 
 import numpy as np
 
-from randcraft import make_anon, make_dirac, make_discrete, make_normal, make_uniform, make_dice_roll, make_coin_flip
+from randcraft import make_anon, make_coin_flip, make_dirac, make_discrete, make_normal, make_uniform
+from randcraft.constructors import make_beta
 from randcraft.pdfs import (
     DiracDeltaDistributionFunction,
     DiscreteDistributionFunction,
     MixtureDistributionFunction,
 )
+from randcraft.pdfs.base import ScaledDistributionFunction
 from randcraft.random_variable import RandomVariable
 
 
-class TestRandomVariable(TestCase):
-    def test_normal_rv(self) -> None:
-        mean = 23.4
-        std_dev = 2.1
+class TestCombiningRvs(TestCase):
+    def test_scaled_rv(self) -> None:
+        a = 2.0
+        b = 5.0
 
-        rv = make_normal(mean=mean, std_dev=std_dev)
+        rv = make_beta(a=a, b=b)
 
-        sample = rv.sample_one()
-        self.assertIsInstance(sample, float)
+        new_rv = (rv * -1) - 2
+        self.assertIsInstance(new_rv, RandomVariable)
+        self.assertIsInstance(new_rv.pdf, ScaledDistributionFunction)
 
-        self.assertEqual(rv.get_mean(exact=True), mean)
-        self.assertAlmostEqual(rv.get_variance(exact=True), std_dev**2)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=mean - std_dev, exact=True), 0.15865525393145707)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=mean, exact=True), 0.5)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=mean + std_dev, exact=True), 0.8413447460685429)
-
-    def test_uniform_rv(self) -> None:
-        low = 10.0
-        high = 20.0
-
-        rv = make_uniform(low=low, high=high)
-
-        sample = rv.sample_one()
-        self.assertIsInstance(sample, float)
-
-        samples = rv.sample_numpy(n=100)
-        self.assertIsInstance(samples, np.ndarray)
-        self.assertEqual(samples.shape, (100,))
-        self.assertGreaterEqual(min(samples), low)
-        self.assertLessEqual(max(samples), high)
-
-        self.assertEqual(rv.get_mean(exact=True), (low + high) / 2)
-        self.assertAlmostEqual(rv.get_variance(exact=True), ((high - low) ** 2) / 12)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=low, exact=True), 0.0)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=15.0, exact=True), 0.5)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=high, exact=True), 1.0)
-
-    def test_dirac_delta_rv(self) -> None:
-        value = 42.0
-
-        rv = make_dirac(value=value)
-
-        sample = rv.sample_one()
-        self.assertEqual(sample, value)
-
-        self.assertEqual(rv.get_mean(exact=True), value)
-        self.assertAlmostEqual(rv.get_variance(exact=True), 0.0)
-        self.assertEqual(rv.get_chance_that_rv_is_le(value=value - 1e-9, exact=True), 0.0)
-        self.assertEqual(rv.get_chance_that_rv_is_le(value=value, exact=True), 1.0)
-        self.assertEqual(rv.get_chance_that_rv_is_le(value=value + 1e-9, exact=True), 1.0)
-
-    def test_discrete_rv(self) -> None:
-        values = [1, 2, 3]
-        probabilities = [0.2, 0.5, 0.3]
-
-        rv = make_discrete(values=values, probabilities=probabilities)
-
-        sample = rv.sample_numpy(n=100)
-        self.assertIsInstance(sample, np.ndarray)
-        self.assertEqual(sample.shape, (100,))
-        self.assertTrue(np.all(np.isin(sample, values)))
-
-        self.assertAlmostEqual(rv.get_mean(exact=True), sum(v * p for v, p in zip(values, probabilities)))
-        self.assertAlmostEqual(
-            rv.get_variance(exact=True),
-            sum(p * (v - rv.get_mean(exact=True)) ** 2 for v, p in zip(values, probabilities)),
-        )
-
-    def test_empirical_rv(self) -> None:
-        mean = 23.4
-
-        rv = make_anon(sampler=lambda n: np.ones(n) * mean)
-
-        sample = rv.sample_one()
-        self.assertEqual(sample, mean)
-
-        self.assertAlmostEqual(rv.get_mean(), mean)
-        self.assertAlmostEqual(rv.get_variance(), 0.0)
-        self.assertEqual(rv.get_chance_that_rv_is_le(value=mean - 1e-9), 0.0)
-        self.assertEqual(rv.get_chance_that_rv_is_le(value=mean), 1.0)
-        self.assertEqual(rv.get_chance_that_rv_is_le(value=mean + 1e-9), 1.0)
-
-        self.assertRaises(NotImplementedError, lambda: rv.get_mean(exact=True))
-        self.assertRaises(NotImplementedError, lambda: rv.get_variance(exact=True))
+        self.assertAlmostEqual(new_rv.get_mean(), -1 * (rv.get_mean()) - 2)
+        self.assertAlmostEqual(new_rv.get_variance(), rv.get_variance())
 
     def test_mixture_rv(self) -> None:
         rv_a = make_dirac(1.0)
@@ -231,21 +162,6 @@ class TestRandomVariable(TestCase):
         print(combined)
         self.assertEqual(combined.get_variance(), coin_flip.get_variance() + norm.get_variance())
         self.assertEqual(combined.get_mean(), 0.5)
-
-    def test_plotting(self) -> None:
-        rv1 = make_normal(mean=0, std_dev=1)
-        rv2 = make_uniform(low=-1, high=1)
-        combined = rv1 + rv2
-
-        rv1.pdf.plot()
-        rv2.pdf.plot()
-        combined.pdf.plot()
-
-        discrete = make_discrete(values=[1, 2, 3])
-        discrete.pdf.plot()
-
-        mixed = RandomVariable.mix_rvs([rv1, rv2, combined, discrete])
-        mixed.pdf.plot()
 
     def test_add_special_event(self) -> None:
         rv = make_dirac(value=1.0)

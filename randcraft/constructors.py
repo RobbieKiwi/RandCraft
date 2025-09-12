@@ -4,6 +4,7 @@ import numpy as np
 
 from randcraft.pdfs import (
     AnonymousDistributionFunction,
+    BetaDistributionFunction,
     DiracDeltaDistributionFunction,
     DiscreteDistributionFunction,
     NormalDistributionFunction,
@@ -19,6 +20,7 @@ __all__ = [
     "make_coin_flip",
     "make_dice_roll",
     "make_anon",
+    "make_beta",
 ]
 
 
@@ -33,6 +35,12 @@ def make_uniform(low: float | int, high: float | int) -> RandomVariable:
     low = float(low)
     high = float(high)
     return RandomVariable(pdf=UniformDistributionFunction(low=low, high=high))
+
+
+def make_beta(a: float | int, b: float | int) -> RandomVariable:
+    a = float(a)
+    b = float(b)
+    return RandomVariable(pdf=BetaDistributionFunction(a=a, b=b))
 
 
 # Discrete

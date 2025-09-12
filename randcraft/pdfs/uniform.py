@@ -13,8 +13,8 @@ class UniformDistributionFunction(ScipyDistributionFunction):
         self._high = high
         self._scipy_rv: rv_continuous_frozen = uniform(loc=low, scale=high - low)  # type: ignore
 
-    @classmethod
-    def get_short_name(cls) -> str:
+    @property
+    def short_name(self) -> str:
         return "uniform"
 
     @property
@@ -29,6 +29,9 @@ class UniformDistributionFunction(ScipyDistributionFunction):
 
     def add_constant(self, x: float) -> "UniformDistributionFunction":
         return UniformDistributionFunction(low=self._low + float(x), high=self._high + float(x))
+
+    def copy(self) -> "UniformDistributionFunction":
+        return UniformDistributionFunction(low=self._low, high=self._high)
 
     @classmethod
     def from_unsorted(cls, values: tuple[float, float]) -> Self:
