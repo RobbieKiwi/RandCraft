@@ -1,4 +1,5 @@
 from functools import cached_property
+from typing import Sequence
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -11,7 +12,7 @@ from randcraft.pdfs.base import ProbabilityDistributionFunction
 class MixtureDistributionFunction(ProbabilityDistributionFunction):
     def __init__(
         self,
-        pdfs: list[ProbabilityDistributionFunction],
+        pdfs: Sequence[ProbabilityDistributionFunction],
         probabilities: list[float] | None = None,
     ) -> None:
         if probabilities is None:
