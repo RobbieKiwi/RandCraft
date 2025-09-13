@@ -13,13 +13,14 @@ from randcraft.pdfs import (
 from randcraft.random_variable import RandomVariable
 
 __all__ = [
-    "make_normal",
-    "make_uniform",
     "make_discrete",
     "make_dirac",
     "make_coin_flip",
     "make_die_roll",
     "make_anon",
+    "make_scipy",
+    "make_normal",
+    "make_uniform",
     "make_beta",
     "make_gamma",
 ]

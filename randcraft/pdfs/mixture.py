@@ -1,5 +1,5 @@
+from collections.abc import Sequence
 from functools import cached_property
-from typing import Sequence
 
 import numpy as np
 from matplotlib.axes import Axes
