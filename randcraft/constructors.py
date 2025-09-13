@@ -1,54 +1,29 @@
 from collections.abc import Callable
 
 import numpy as np
+from scipy.stats import beta, gamma, norm, uniform
+from scipy.stats._distn_infrastructure import rv_continuous
 
 from randcraft.pdfs import (
     AnonymousDistributionFunction,
-    BetaDistributionFunction,
     DiracDeltaDistributionFunction,
     DiscreteDistributionFunction,
-    GammaDistributionFunction,
-    NormalDistributionFunction,
-    UniformDistributionFunction,
+    ScipyDistributionFunction,
 )
 from randcraft.random_variable import RandomVariable
 
 __all__ = [
-    "make_normal",
-    "make_uniform",
     "make_discrete",
     "make_dirac",
     "make_coin_flip",
     "make_die_roll",
     "make_anon",
+    "make_scipy",
+    "make_normal",
+    "make_uniform",
     "make_beta",
     "make_gamma",
 ]
-
-
-# Continuous
-def make_normal(mean: float | int, std_dev: float | int) -> RandomVariable:
-    mean = float(mean)
-    std_dev = float(std_dev)
-    return RandomVariable(pdf=NormalDistributionFunction(mean=mean, std_dev=std_dev))
-
-
-def make_uniform(low: float | int, high: float | int) -> RandomVariable:
-    low = float(low)
-    high = float(high)
-    return RandomVariable(pdf=UniformDistributionFunction(low=low, high=high))
-
-
-def make_beta(a: float | int, b: float | int) -> RandomVariable:
-    a = float(a)
-    b = float(b)
-    return RandomVariable(pdf=BetaDistributionFunction(a=a, b=b))
-
-
-def make_gamma(shape: float | int, scale: float | int) -> RandomVariable:
-    shape = float(shape)
-    scale = float(scale)
-    return RandomVariable(pdf=GammaDistributionFunction(a=shape)) * scale
 
 
 # Discrete
@@ -76,3 +51,33 @@ def make_die_roll(sides: int = 6) -> RandomVariable:
 # Misc
 def make_anon(sampler: Callable[[int], np.ndarray]) -> RandomVariable:
     return RandomVariable(pdf=AnonymousDistributionFunction(sampler=sampler))
+
+
+# Scipy
+def make_scipy(scipy_rv: rv_continuous, *args: float | int, **kwargs: float | int) -> RandomVariable:
+    return RandomVariable(pdf=ScipyDistributionFunction(scipy_rv, *args, **kwargs))
+
+
+# Helpers for common scipy distributions
+def make_normal(mean: float | int, std_dev: float | int) -> RandomVariable:
+    mean = float(mean)
+    std_dev = float(std_dev)
+    return make_scipy(scipy_rv=norm, loc=mean, scale=std_dev)
+
+
+def make_uniform(low: float | int, high: float | int) -> RandomVariable:
+    low = float(low)
+    high = float(high)
+    return make_scipy(scipy_rv=uniform, loc=low, scale=high - low)
+
+
+def make_beta(a: float | int, b: float | int) -> RandomVariable:
+    a = float(a)
+    b = float(b)
+    return make_scipy(scipy_rv=beta, a=a, b=b)
+
+
+def make_gamma(a: float | int, scale: float | int) -> RandomVariable:
+    a = float(a)
+    scale = float(scale)
+    return make_scipy(scipy_rv=gamma, a=a, scale=scale)

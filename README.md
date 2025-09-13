@@ -33,22 +33,31 @@ three_dice = dice * 3
 three_dice.get_chance_that_rv_is_le(10.0)
 # 0.5
 ```
+
+## Example with arbitrary continuous distribution from scipy.stats
+```python
+from scipy.stats import uniform
+from randcraft.constructors import make_scipy
+
+rv = make_scipy(uniform, loc=1, scale=2)
+# <RandomVariable(scipy-uniform): mean=2.0, var=0.333>
+b = rv * 2
+# <RandomVariable(scipy-uniform): mean=4.0, var=1.33>
+```
+
 ## Features
 
 - **Object-oriented random variables:** Wrap and combine distributions as Python objects.
 - **Distribution composition:** Add, multiply, and transform random variables.
 - **Sampling and statistics:** Easily sample from composed distributions and compute statistics.
 - **Extensible:** Supports custom distributions via subclassing.
-- **Integration with scipy.stats:** Uses scipy under the hood
+- **Integration with scipy.stats:** Use any frozen continuous distribution from scipy stats
 
 ## Supported Distributions
 
 RandCraft currently supports the following distributions:
 
-- Normal
-- Uniform
-- Beta
-- Gamma
+- Normal, Uniform, Beta, Gamma + any other continuous distribution from scipy.stats
 - Discrete
 - DiracDelta
 - Anonymous distribution functions based on a provided sampler function

@@ -70,7 +70,7 @@ class TestCoreRvs(TestCase):
         shape = 2.0
         scale = 3.0
 
-        rv = make_gamma(shape=shape, scale=scale)
+        rv = make_gamma(a=shape, scale=scale)
 
         sample = rv.sample_one()
         self.assertIsInstance(sample, float)

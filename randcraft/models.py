@@ -155,8 +155,12 @@ class AlgebraicFunction:
     offset: float = 0.0
 
     @cached_property
+    def is_identity(self) -> bool:
+        return self.scale == 1.0 and self.offset == 0.0
+
+    @cached_property
     def is_active(self) -> bool:
-        return self.scale != 1.0 or self.offset != 0.0
+        return not self.is_identity
 
     def __mul__(self, factor: float) -> "AlgebraicFunction":
         factor = float(factor)
@@ -173,11 +177,17 @@ class AlgebraicFunction:
         return self.__add__(addend)
 
     def apply(self, x: F) -> F:
+        if self.is_identity:
+            return x
         return self.scale * x + self.offset
 
     def apply_inverse(self, y: F) -> F:
+        if self.is_identity:
+            return y
         return (y - self.offset) / self.scale
 
     def apply_on_range(self, x_range: tuple[float, float]) -> tuple[float, float]:
+        if self.is_identity:
+            return x_range
         processed = self.apply(np.array(x_range))
         return float(np.min(processed)), float(np.max(processed))

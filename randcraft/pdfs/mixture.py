@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from functools import cached_property
 
 import numpy as np
@@ -11,7 +12,7 @@ from randcraft.pdfs.base import ProbabilityDistributionFunction
 class MixtureDistributionFunction(ProbabilityDistributionFunction):
     def __init__(
         self,
-        pdfs: list[ProbabilityDistributionFunction],
+        pdfs: Sequence[ProbabilityDistributionFunction],
         probabilities: list[float] | None = None,
     ) -> None:
         if probabilities is None:

@@ -1,14 +1,16 @@
 import numpy as np
+from scipy.stats import norm
 
 from randcraft.models import Statistics, sum_uncertain_floats
 from randcraft.pdfs.anonymous import AnonymousDistributionFunction
 from randcraft.pdfs.base import (
     ProbabilityDistributionFunction,
+    ScaledDistributionFunction,
     T_Pdf,
 )
 from randcraft.pdfs.discrete import DiracDeltaDistributionFunction, DiscreteDistributionFunction
 from randcraft.pdfs.mixture import MixtureDistributionFunction
-from randcraft.pdfs.normal import NormalDistributionFunction
+from randcraft.pdfs.scipy_pdf import ScipyDistributionFunction
 
 
 class PdfConvolver:
@@ -19,7 +21,7 @@ class PdfConvolver:
             types = {pdf.__class__.__name__ for pdf in pdfs}
             raise TypeError(f"All PDFs must be instances of ProbabilityDistributionFunction, got: {types}")
 
-        if all(isinstance(rv, NormalDistributionFunction) for rv in pdfs):
+        if all(rv.short_name == "normal" for rv in pdfs):
             return cls.convolve_normals(pdfs=pdfs)  # type: ignore
 
         discrete_pdfs = [pdf for pdf in pdfs if isinstance(pdf, DiscreteDistributionFunction)]
@@ -77,22 +79,23 @@ class PdfConvolver:
         return result_pdf
 
     @classmethod
-    def convolve_normals(cls, pdfs: list[NormalDistributionFunction]) -> NormalDistributionFunction:
+    def convolve_normals(cls, pdfs: list[ScipyDistributionFunction]) -> ScipyDistributionFunction:
         # Equivalent to adding independent normal random variables
         if not pdfs:
             raise ValueError("No PDFs provided for combination.")
 
         for pdf in pdfs:
-            assert isinstance(pdf, NormalDistributionFunction)
+            assert isinstance(pdf, ScipyDistributionFunction)
+            assert pdf.short_name == "normal", f"Expected normal distribution, got {pdf.short_name}"
 
         new_mean = sum([pdf.mean for pdf in pdfs])
         new_variance = sum([pdf.variance for pdf in pdfs])
-        return NormalDistributionFunction(mean=new_mean, std_dev=new_variance**0.5)
+        return ScipyDistributionFunction(norm, loc=new_mean, scale=new_variance**0.5)
 
     @classmethod
     def convolve_with_discrete(
         cls, pdf_a: T_Pdf, discrete: DiscreteDistributionFunction
-    ) -> T_Pdf | MixtureDistributionFunction:
+    ) -> T_Pdf | MixtureDistributionFunction | ScaledDistributionFunction:
         assert isinstance(discrete, DiscreteDistributionFunction)
 
         # Shortcut for dirac delta
