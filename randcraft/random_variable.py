@@ -81,7 +81,7 @@ class RandomVariable:
             pdf = DiracDeltaDistributionFunction(value=float(other))
         else:
             pdf = other.pdf
-        new_pdf = PdfConvolver.convolve_pdfs(pdfs=[self.pdf, pdf])
+        new_pdf = PdfConvolver.convolve_pdfs(pdfs=[self.pdf, pdf])  # type: ignore
         return RandomVariable(pdf=new_pdf)
 
     def __radd__(self, other: Union["RandomVariable", float]) -> "RandomVariable":

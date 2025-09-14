@@ -5,14 +5,14 @@ from matplotlib.axes import Axes
 from scipy.stats._distn_infrastructure import rv_continuous, rv_continuous_frozen
 
 from randcraft.models import AlgebraicFunction, Statistics, certainly
-from randcraft.pdfs.base import ProbabilityDistributionFunction, ScaledDistributionFunction
+from randcraft.pdfs.continuous import ContinuousDistributionFunction, ScaledDistributionFunction
 
 
 class RescalingError(Exception):
     pass
 
 
-class ScipyDistributionFunction(ProbabilityDistributionFunction):
+class ScipyDistributionFunction(ContinuousDistributionFunction):
     def __init__(self, scipy_rv_type: rv_continuous, *args, **kwargs) -> None:
         # It really should be continuous, but the typing here helps to interface with strange scipy typing
         scipy_rv = scipy_rv_type(*args, **kwargs)
@@ -61,21 +61,18 @@ class ScipyDistributionFunction(ProbabilityDistributionFunction):
             return scale_with_scale_distribution()
 
         def scale_with_scipy() -> ScipyDistributionFunction:
-            shapes: str | None = self._scipy_rv_type.shapes  # type: ignore
-            if shapes is None:
-                shape_params = []
-            else:
-                shape_params = shapes.split(", ")
             shape_args = self._scipy_rv.args
-            shape_kwargs = {k: v for k, v in zip(shape_params, shape_args)}
-            unit_distribution = self._scipy_rv_type(loc=0.0, scale=1.0, **shape_kwargs)
+            shape_kwargs = {k: v for k, v in self._scipy_rv.kwds.items()}
+            shape_kwargs["loc"] = 0.0
+            shape_kwargs["scale"] = 1.0
+            unit_distribution = self._scipy_rv_type(*shape_args, **shape_kwargs)  # type: ignore
             current_scale = self.std_dev / unit_distribution.std()
             current_loc = self.mean - unit_distribution.mean() * current_scale
             new_loc = af.apply(current_loc)
             new_scale = current_scale * af.scale
             shape_kwargs["loc"] = new_loc
             shape_kwargs["scale"] = new_scale
-            return ScipyDistributionFunction(self._scipy_rv_type, **shape_kwargs)
+            return ScipyDistributionFunction(self._scipy_rv_type, *shape_args, **shape_kwargs)
 
         for f in [scale_with_scipy, scale_with_scale_distribution]:
             result = f()
