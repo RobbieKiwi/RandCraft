@@ -1,5 +1,3 @@
-from unittest import TestCase
-
 import numpy as np
 
 from randcraft import make_anon, make_coin_flip, make_dirac, make_discrete, make_normal, make_uniform
@@ -9,22 +7,26 @@ from randcraft.pdfs import (
     DiscreteDistributionFunction,
     MixtureDistributionFunction,
 )
-from randcraft.pdfs.base import ScaledDistributionFunction
 from randcraft.random_variable import RandomVariable
+from tests.base_test_case import BaseTestCase
 
 
-class TestCombiningRvs(TestCase):
+class TestCombiningRvs(BaseTestCase):
     def test_scaled_rv(self) -> None:
         a = 2.0
         b = 5.0
 
         rv = make_beta(a=a, b=b)
 
-        new_rv = (rv * -1) - 2
-        self.assertIsInstance(new_rv, RandomVariable)
-        self.assertIsInstance(new_rv.pdf, ScaledDistributionFunction)
+        scaled_rv = rv * 1
+        self.assert_stats_are_close(a=scaled_rv.statistics, b=rv.statistics)
 
-        self.assertAlmostEqual(new_rv.get_mean(), -1 * (rv.get_mean()) - 2)
+        offset_rv = scaled_rv - 1
+        self.assertAlmostEqual(offset_rv.get_mean(), rv.get_mean() - 1)
+
+        negative_rv = rv * -1
+        new_rv = negative_rv - 2
+        self.assertAlmostEqual(new_rv.get_mean(), rv.get_mean() * -1 - 2)
         self.assertAlmostEqual(new_rv.get_variance(), rv.get_variance())
 
     def test_mixture_rv(self) -> None:

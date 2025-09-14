@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from randcraft import make_discrete, make_normal, make_uniform
 from randcraft.constructors import make_beta
-from randcraft.pdfs.base import ScaledDistributionFunction
+from randcraft.pdfs.continuous import ScaledDistributionFunction
 from randcraft.random_variable import RandomVariable
 
 
