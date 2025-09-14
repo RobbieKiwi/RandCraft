@@ -7,10 +7,10 @@ from matplotlib.axes import Axes
 from scipy.stats import gaussian_kde
 
 from randcraft.models import AlgebraicFunction, Statistics, maybe
-from randcraft.pdfs.base import ProbabilityDistributionFunction
+from randcraft.pdfs.continuous import ContinuousDistributionFunction
 
 
-class AnonymousDistributionFunction(ProbabilityDistributionFunction):
+class AnonymousDistributionFunction(ContinuousDistributionFunction):
     def __init__(
         self,
         sampler: Callable[[int], np.ndarray],

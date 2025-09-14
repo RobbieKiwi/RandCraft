@@ -7,12 +7,14 @@ from matplotlib.axes import Axes
 from randcraft.models import Statistics, sum_uncertain_floats
 from randcraft.pdfs.anonymous import AnonymousDistributionFunction
 from randcraft.pdfs.base import ProbabilityDistributionFunction
+from randcraft.pdfs.continuous import ContinuousDistributionFunction
+from randcraft.pdfs.discrete import DiscreteDistributionFunction
 
 
 class MixtureDistributionFunction(ProbabilityDistributionFunction):
     def __init__(
         self,
-        pdfs: Sequence[ProbabilityDistributionFunction],
+        pdfs: Sequence[ContinuousDistributionFunction | DiscreteDistributionFunction],
         probabilities: list[float] | None = None,
     ) -> None:
         if probabilities is None:
@@ -25,7 +27,9 @@ class MixtureDistributionFunction(ProbabilityDistributionFunction):
         pdfs = self._pdfs
         probabilities = self._probabilities
         assert len(pdfs) > 0, "At least one pdf is required"
-        assert all(isinstance(pdf, ProbabilityDistributionFunction) for pdf in pdfs)
+        assert all(isinstance(pdf, ContinuousDistributionFunction | DiscreteDistributionFunction) for pdf in pdfs), (
+            f"All pdfs must be instances of {ContinuousDistributionFunction | DiscreteDistributionFunction}"
+        )
         assert len(pdfs) == len(probabilities), "Number of PDFs must match number of weights"
         assert all(w > 0 for w in probabilities), "All weights must be positive"
         total_weight = sum(probabilities)
@@ -55,7 +59,7 @@ class MixtureDistributionFunction(ProbabilityDistributionFunction):
         )
 
     @property
-    def pdfs(self) -> list[ProbabilityDistributionFunction]:
+    def pdfs(self) -> Sequence[ContinuousDistributionFunction | DiscreteDistributionFunction]:
         return self._pdfs
 
     @property
