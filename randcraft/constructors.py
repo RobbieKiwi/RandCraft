@@ -11,6 +11,7 @@ from randcraft.pdfs import (
     ScipyDistributionFunction,
 )
 from randcraft.random_variable import RandomVariable
+from randcraft.utils import clean_1d_array
 
 __all__ = [
     "make_discrete",
@@ -27,9 +28,13 @@ __all__ = [
 
 
 # Discrete
-def make_discrete(values: list[float] | list[int], probabilities: list[float] | None = None) -> RandomVariable:
+def make_discrete(
+    values: list[float] | list[int] | np.ndarray, probabilities: list[float] | np.ndarray | None = None
+) -> RandomVariable:
     # If probabilities are not provided, equal probabilities are assumed
-    values = [float(v) for v in values]
+    values = clean_1d_array(values)
+    if probabilities is not None:
+        probabilities = clean_1d_array(probabilities)
     return RandomVariable(pdf=DiscreteDistributionFunction(values=values, probabilities=probabilities))
 
 
