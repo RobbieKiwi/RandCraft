@@ -17,6 +17,7 @@ class MixtureDistributionFunction(ProbabilityDistributionFunction):
         pdfs: Sequence[ContinuousDistributionFunction | DiscreteDistributionFunction],
         probabilities: list[float] | None = None,
     ) -> None:
+        # TODO Add support for mixture of mixtures by flattening the input
         if probabilities is None:
             probabilities = [1.0 / len(pdfs)] * len(pdfs)
         self._pdfs = pdfs
