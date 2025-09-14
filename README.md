@@ -22,28 +22,6 @@ combined.pdf.plot()
 ```
 ![Double normal](images/double_normal.png)
 
-## Another example
-```python
-from randcraft.constructors import make_die_roll
-
-die = make_die_roll(sides=6)
-# <RandomVariable(discrete): mean=3.5, var=2.92>
-three_dice = dice * 3
-# <RandomVariable(discrete): mean=10.5, var=26.2>
-three_dice.get_chance_that_rv_is_le(10.0)
-# 0.5
-```
-
-## Example with arbitrary continuous distribution from scipy.stats
-```python
-from scipy.stats import uniform
-from randcraft.constructors import make_scipy
-
-rv = make_scipy(uniform, loc=1, scale=2)
-# <RandomVariable(scipy-uniform): mean=2.0, var=0.333>
-b = rv * 2
-# <RandomVariable(scipy-uniform): mean=4.0, var=1.33>
-```
 
 ## Features
 
@@ -57,7 +35,7 @@ b = rv * 2
 
 RandCraft currently supports the following distributions:
 
-- Normal, Uniform, Beta, Gamma + any other continuous distribution from scipy.stats
+- Normal, Uniform, Beta, Gamma + any other parametric continuous distribution from scipy.stats
 - Discrete
 - DiracDelta
 - Anonymous distribution functions based on a provided sampler function
@@ -85,6 +63,47 @@ pip install randcraft
 - `.get_chance_that_rv_is_le(x)`: Evaluate cdf at point
 - `.get_value_that_is_at_le_chance(x)`: Evaluate inverse cdf at point
 - `.pdf.plot()`: Take a peek at your distribution
+
+## More Examples
+### Combining dice rolls
+```python
+from randcraft.constructors import make_die_roll
+
+die = make_die_roll(sides=6)
+# <RandomVariable(discrete): mean=3.5, var=2.92>
+three_dice = dice * 3
+# <RandomVariable(discrete): mean=10.5, var=26.2>
+three_dice.get_chance_that_rv_is_le(10.0)
+# 0.5
+```
+
+### Using arbitrary parametric continuous distribution from scipy.stats
+```python
+from scipy.stats import uniform
+from randcraft.constructors import make_scipy
+
+rv = make_scipy(uniform, loc=1, scale=2)
+# <RandomVariable(scipy-uniform): mean=2.0, var=0.333>
+b = rv * 2
+# <RandomVariable(scipy-uniform): mean=4.0, var=1.33>
+```
+
+### Kernel density estimation and combination
+You have observations of two independent random variables. You want to use kernal density estimation to create continuous random variables for each and then add them together.
+```python
+import numpy as np
+from randcraft.observations import make_kde
+
+observations_a = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+observations_b = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
+rv_a = make_kde(observations=observations_a)
+# <RandomVariable(multi): mean=3.0, var=3.31>
+rv_b = make_kde(observations=observations_b)
+# <RandomVariable(multi): mean=0.5, var=0.365>
+rv_joined = rv_a + rv_b
+# <RandomVariable(multi): mean=3.5, var=3.68>
+```
+Uses `gaussian_kde` by `scipy.stats` under the hood. You also have the option to pass arguments for `gaussian_kde`, or provide your own kernel as a `RandomVariable`.
 
 ## Extending RandCraft
 

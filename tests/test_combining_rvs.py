@@ -2,6 +2,7 @@ import numpy as np
 
 from randcraft import make_anon, make_coin_flip, make_dirac, make_discrete, make_normal, make_uniform
 from randcraft.constructors import make_beta, make_die_roll
+from randcraft.misc import mix_rvs
 from randcraft.pdfs import (
     DiracDeltaDistributionFunction,
     DiscreteDistributionFunction,
@@ -28,16 +29,6 @@ class TestCombiningRvs(BaseTestCase):
         new_rv = negative_rv - 2
         self.assertAlmostEqual(new_rv.get_mean(), rv.get_mean() * -1 - 2)
         self.assertAlmostEqual(new_rv.get_variance(), rv.get_variance())
-
-    def test_mixture_rv(self) -> None:
-        rv_a = make_dirac(1.0)
-        rv_b = make_normal(mean=2.0, std_dev=2.0)
-        mixture = RandomVariable.mix_rvs([rv_a, rv_b])
-
-        self.assertIsInstance(mixture, RandomVariable)
-        self.assertIsInstance(mixture.pdf, MixtureDistributionFunction)
-        self.assertAlmostEqual(mixture.get_mean(exact=True), (1.0 + 2.0) / 2)
-        # TODO Test variance of mixture, test using different weights
 
     def test_combining_different_types_of_rvs(self) -> None:
         rv1 = make_normal(mean=10, std_dev=2)
@@ -164,13 +155,6 @@ class TestCombiningRvs(BaseTestCase):
         print(combined)
         self.assertEqual(combined.get_variance(), coin_flip.get_variance() + norm.get_variance())
         self.assertEqual(combined.get_mean(), 0.5)
-
-    def test_add_special_event(self) -> None:
-        rv = make_dirac(value=1.0)
-        new_rv = rv.add_special_event(value=2.0, chance=0.5)
-
-        self.assertIsInstance(new_rv, RandomVariable)
-        self.assertAlmostEqual(new_rv.get_mean(), 1.5)
 
     def test_three_dice(self) -> None:
         dice = make_die_roll(sides=6)

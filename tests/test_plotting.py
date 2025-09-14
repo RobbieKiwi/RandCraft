@@ -2,6 +2,7 @@ from unittest import TestCase
 
 from randcraft import make_discrete, make_normal, make_uniform
 from randcraft.constructors import make_beta
+from randcraft.misc import mix_rvs
 from randcraft.pdfs.continuous import ScaledDistributionFunction
 from randcraft.random_variable import RandomVariable
 
@@ -19,7 +20,7 @@ class TestPlotting(TestCase):
         discrete = make_discrete(values=[1, 2, 3])
         discrete.pdf.plot()
 
-        mixed = RandomVariable.mix_rvs([rv1, rv2, combined, discrete])
+        mixed = mix_rvs([rv1, rv2, combined, discrete])
         mixed.pdf.plot()
 
     def test_scaled_plotting(self) -> None:

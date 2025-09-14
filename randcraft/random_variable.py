@@ -7,7 +7,6 @@ from randcraft.pdf_convolver import PdfConvolver
 from randcraft.pdfs import (
     AnonymousDistributionFunction,
     DiracDeltaDistributionFunction,
-    MixtureDistributionFunction,
     ProbabilityDistributionFunction,
 )
 
@@ -70,11 +69,6 @@ class RandomVariable:
     def sample_one(self) -> float:
         return self.sample_numpy(1).tolist()[0]
 
-    def add_special_event(self, value: float, chance: float) -> "RandomVariable":
-        assert 0 <= chance <= 1.0, "Value must be between 0 and 1"
-        dirac_rv = RandomVariable(DiracDeltaDistributionFunction(value=value))
-        return self.mix_rvs(rvs=[self, dirac_rv], probabilities=[1.0 - chance, chance])
-
     def __add__(self, other: Union["RandomVariable", float]) -> "RandomVariable":
         # Assumes pdfs are not correlated
         if not isinstance(other, RandomVariable):
@@ -105,8 +99,3 @@ class RandomVariable:
 
     def __truediv__(self, factor: float) -> "RandomVariable":
         return self.__mul__(1.0 / factor)
-
-    @classmethod
-    def mix_rvs(cls, rvs: list["RandomVariable"], probabilities: list[float] | None = None) -> "RandomVariable":
-        pdfs = [rv.pdf for rv in rvs]
-        return RandomVariable(pdf=MixtureDistributionFunction(pdfs=pdfs, probabilities=probabilities))
