@@ -159,3 +159,14 @@ class TestCombiningRvs(BaseTestCase):
         three_dice = dice + dice + dice
         result = three_dice.get_chance_that_rv_is_le(10.0)
         self.assertEqual(result, 0.5)
+
+    def test_complex_convolution(self) -> None:
+        rv_base = make_uniform(low=-1, high=1)
+        rv = rv_base + rv_base
+        discrete = make_discrete(values=[0, 6])
+        new_rv = rv + discrete
+        self.assertAlmostEqual(new_rv.get_chance_that_rv_is_le(-2.0), 0.0, places=3)
+        self.assertAlmostEqual(new_rv.get_chance_that_rv_is_le(0.0), 0.25, places=3)
+        self.assertAlmostEqual(new_rv.get_chance_that_rv_is_le(3.0), 0.5, places=3)
+        self.assertAlmostEqual(new_rv.get_chance_that_rv_is_le(6.0), 0.75, places=3)
+        self.assertAlmostEqual(new_rv.get_chance_that_rv_is_le(8.0), 1.0, places=3)

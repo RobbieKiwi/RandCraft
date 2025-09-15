@@ -14,9 +14,12 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
     def __init__(
         self,
         continuous_pdfs: list[ContinuousDistributionFunction],
-        discrete_pdf: DiscreteDistributionFunction | None = None,
+        discrete_pdf: DiscreteDistributionFunction = DiracDeltaDistributionFunction(value=0.0),
     ) -> None:
         assert len(continuous_pdfs) > 0, "At least one continuous pdf is required"
+        assert isinstance(discrete_pdf, DiscreteDistributionFunction), (
+            f"discrete_pdf must be a {DiscreteDistributionFunction.__name__}, got {type(discrete_pdf)}"
+        )
         self._continuous_pdfs = continuous_pdfs
         self._discrete_pdf = discrete_pdf
 
@@ -32,13 +35,15 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
     def continuous_pdfs(self) -> list[ContinuousDistributionFunction]:
         return self._continuous_pdfs
 
-    @property
-    def discrete_pdf(self) -> DiscreteDistributionFunction | None:
+    @cached_property
+    def discrete_pdf(self) -> DiscreteDistributionFunction:
         return self._discrete_pdf
 
-    @property
+    @cached_property
     def has_discrete_pdf(self) -> bool:
-        return self.discrete_pdf is not None
+        if isinstance(self.discrete_pdf, DiracDeltaDistributionFunction) and self.discrete_pdf.value == 0.0:
+            return False
+        return True
 
     @cached_property
     def statistics(self) -> Statistics:
@@ -56,14 +61,13 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
         )
 
     def calculate_pdf(self, x: np.ndarray) -> np.ndarray:
-        discrete_pdf = self.discrete_pdf
-        if discrete_pdf is None:
+        if not self.has_discrete_pdf:
             return self._calculate_continuous_pdf(x)
 
         result = np.zeros_like(x)
 
         shifted_xs: list[np.ndarray] = []
-        for offset in discrete_pdf.values:
+        for offset in self.discrete_pdf.values:
             shifted_x = x - offset
             shifted_xs.append(shifted_x)
 
@@ -74,7 +78,7 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
         unique_continuous = self._calculate_continuous_pdf(unique_shifted_values)
         # Create a mapping from value to index in unique_shifted_values
         idx_map = {val: idx for idx, val in enumerate(unique_shifted_values)}
-        for offset, scale in zip(discrete_pdf.values, discrete_pdf.probabilities):
+        for offset, scale in zip(self.discrete_pdf.values, self.discrete_pdf.probabilities):
             shifted_x = x - offset
             # Map each value in shifted_x to its index in unique_shifted_values
             indices = np.array([idx_map.get(val, -1) for val in shifted_x])
@@ -107,14 +111,27 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
         Returns two numpy arrays (x_values, cumulative_probabilities) representing the CDF.
         The chance that x < value can be found by interpolating cumulative_probabilities at value.
         """
-        # Step 1: Sample
-        samples = self.sample_numpy(1000)
-        lower, upper = np.percentile(samples, [0.1, 99.9])
-        delta = upper - lower
-        x_values = np.linspace(lower - delta / 2, upper + delta / 2, 10000)
+        mean = self.statistics.mean.value
+        std_dev = self.statistics.std_dev.value
+        has_finite_lower_support = not np.isinf(self.statistics.min_value.value)
+        has_finite_upper_support = not np.isinf(self.statistics.max_value.value)
+
+        if has_finite_lower_support and has_finite_upper_support:
+            lower = self.statistics.min_value.value
+            upper = self.statistics.max_value.value
+        elif has_finite_lower_support:
+            lower = self.statistics.min_value.value
+            upper = lower + 6 * std_dev
+        elif has_finite_upper_support:
+            upper = self.statistics.max_value.value
+            lower = upper - 6 * std_dev
+        else:
+            lower = mean - 3 * std_dev
+            upper = mean + 3 * std_dev
+
+        x_values = np.linspace(lower, upper, 10000)
         pdf_vals = self.calculate_pdf(x_values)
 
-        # Step 2: Integrate
         cdf_vals = cumulative_trapezoid(pdf_vals, x_values, initial=0)
         if cdf_vals[-1] < 1:
             remainder = 1 - cdf_vals[-1]
@@ -139,16 +156,12 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
     def scale(self, x: float) -> "MultiDistributionFunction":
         x = float(x)
         continuous_pdfs = [pdf.scale(x) for pdf in self.continuous_pdfs]
-
-        discrete_pdf = self.discrete_pdf
-        if discrete_pdf is not None:
-            discrete_pdf = discrete_pdf.scale(x)
+        discrete_pdf = self.discrete_pdf.scale(x)
         return MultiDistributionFunction(continuous_pdfs=continuous_pdfs, discrete_pdf=discrete_pdf)
 
     def add_constant(self, x: float) -> "MultiDistributionFunction":
         x = float(x)
-        discrete_pdf = self.discrete_pdf or DiracDeltaDistributionFunction(value=0.0)
-        discrete_pdf = discrete_pdf.add_constant(x)
+        discrete_pdf = self.discrete_pdf.add_constant(x)
         return MultiDistributionFunction(continuous_pdfs=self.continuous_pdfs, discrete_pdf=discrete_pdf)
 
     def sample_numpy(self, n: int) -> np.ndarray:
