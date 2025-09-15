@@ -2,11 +2,9 @@ import numpy as np
 
 from randcraft import make_anon, make_coin_flip, make_dirac, make_discrete, make_normal, make_uniform
 from randcraft.constructors import make_beta, make_die_roll
-from randcraft.misc import mix_rvs
 from randcraft.pdfs import (
     DiracDeltaDistributionFunction,
     DiscreteDistributionFunction,
-    MixtureDistributionFunction,
 )
 from randcraft.random_variable import RandomVariable
 from tests.base_test_case import BaseTestCase
