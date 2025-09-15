@@ -592,6 +592,7 @@ source = { editable = "." }
 dependencies = [
     { name = "hatchling" },
     { name = "matplotlib" },
+    { name = "numpy" },
     { name = "pandas" },
     { name = "scipy" },
 ]
@@ -608,6 +609,7 @@ dev = [
 requires-dist = [
     { name = "hatchling", specifier = ">=1.27.0" },
     { name = "matplotlib", specifier = ">=3.10.6" },
+    { name = "numpy", specifier = ">=2.3.3" },
     { name = "pandas", specifier = ">=2.3.0" },
     { name = "scipy", specifier = ">=1.16.1" },
 ]

@@ -102,7 +102,7 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
         combined_pdf = fftconvolve(raw_pdfs[0], raw_pdfs[1], mode="same")
         for pdf in raw_pdfs[2:]:
             combined_pdf = fftconvolve(combined_pdf, pdf, mode="same")
-        combined_pdf /= np.trapz(combined_pdf, x2)  # Normalize
+        combined_pdf /= np.trapezoid(combined_pdf, x2)  # Normalize
         return np.interp(x, x2, combined_pdf)
 
     @cached_property
