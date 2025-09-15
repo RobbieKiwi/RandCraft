@@ -86,9 +86,11 @@ class ProbabilityDistributionFunction(ABC):
             if is_cumulative:
                 self.plot_cdf_on_axis(ax=ax)
                 ax.set_title("CDF")
+                ax.set_ylim(0.0, 1.01)
             else:
                 self.plot_pdf_on_axis(ax=ax)
                 ax.set_title("PDF")
+                ax.set_ylim(bottom=0)
             ax.set_xlabel("x")
             ax.set_xlim(self._get_plot_range())
             ax.set_ylabel("P(X<=x)" if is_cumulative else "P(X=x)")
@@ -102,16 +104,12 @@ class ProbabilityDistributionFunction(ABC):
             fig, axs = plt.subplots(2, 1, sharex="all")
             _plot(is_cumulative=False, ax=axs[0])
             _plot(is_cumulative=True, ax=axs[1])
-            axs[0].set_ylim(0, None)
-            axs[1].set_ylim(0, 1.1)
         elif kind == "pdf":
             fig, ax1 = plt.subplots()
             _plot(is_cumulative=False, ax=ax1)
-            ax1.set_ylim(bottom=0)
         elif kind == "cdf":
             fig, ax1 = plt.subplots()
             _plot(is_cumulative=True, ax=ax1)
-            ax1.set_ylim(0, 1.1)
         else:
             raise ValueError(f"Invalid kind: {kind}. Choose 'pdf', 'cdf', or 'both'.")
 

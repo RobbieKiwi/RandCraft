@@ -25,17 +25,17 @@ class Uncertainty[T]:
         return str(self)
 
     def __mul__(self, other: "Uncertainty[T]" | T) -> "Uncertainty[T]":
-        return self._combine(other=other, func=lambda x, y: x * y)
+        return self._combine(other=other, func=lambda x, y: x * y)  # type: ignore
 
     def __add__(self, other: "Uncertainty[T]" | T) -> "Uncertainty[T]":
-        return self._combine(other=other, func=lambda x, y: x + y)
+        return self._combine(other=other, func=lambda x, y: x + y)  # type: ignore
 
     def __sub__(self, other: "Uncertainty[T]" | T) -> "Uncertainty[T]":
-        return self._combine(other=other, func=lambda x, y: x - y)
+        return self._combine(other=other, func=lambda x, y: x - y)  # type: ignore
 
     def __pow__(self, other: int | float) -> "Uncertainty[T]":
         assert not isinstance(other, Uncertainty), "Exponentiation with uncertain exponent is not supported"
-        return self.apply(func=lambda x: x**other)
+        return self.apply(func=lambda x: x**other)  # type: ignore
 
     def apply(self, func: Callable[[T], T]) -> "Uncertainty[T]":
         return Uncertainty(value=func(self.value), is_certain=self.is_certain)

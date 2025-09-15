@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Self
 
 import numpy as np
@@ -7,7 +8,30 @@ from randcraft.models import AlgebraicFunction, Statistics
 from randcraft.pdfs.base import ProbabilityDistributionFunction
 
 
-class ContinuousDistributionFunction(ProbabilityDistributionFunction):
+class ContinuousDistributionFunction(ProbabilityDistributionFunction, ABC):
+    @abstractmethod
+    def calculate_pdf(self, x: np.ndarray) -> np.ndarray: ...
+
+    @abstractmethod
+    def calculate_cdf(self, x: np.ndarray) -> np.ndarray: ...
+
+    @abstractmethod
+    def calculate_inverse_cdf(self, x: np.ndarray) -> np.ndarray: ...
+
+    def chance_that_rv_is_le(self, value: float) -> float:
+        if value < self.min_value:
+            return 0.0
+        if value >= self.max_value:
+            return 1.0
+        return float(self.calculate_cdf(np.array([value]))[0])
+
+    def value_that_is_at_le_chance(self, chance: float) -> float:
+        if chance <= 0.0:
+            return self.min_value
+        if chance >= 1.0:
+            return self.max_value
+        return float(self.calculate_inverse_cdf(np.array([chance]))[0])
+
     def scale(self, x: float) -> Self | "ScaledDistributionFunction":
         # Override these if possible
         return ScaledDistributionFunction(inner=self.copy(), algebraic_function=AlgebraicFunction(scale=x))
@@ -15,6 +39,29 @@ class ContinuousDistributionFunction(ProbabilityDistributionFunction):
     def add_constant(self, x: float) -> Self | "ScaledDistributionFunction":
         # Override these if possible
         return ScaledDistributionFunction(inner=self.copy(), algebraic_function=AlgebraicFunction(offset=x))
+
+    def _get_plot_range(self) -> tuple[float, float]:
+        if not np.isinf(self.min_value):
+            start = self.min_value
+        else:
+            start = self.mean - 4 * self.std_dev
+        if not np.isinf(self.max_value):
+            end = self.max_value
+        else:
+            end = self.mean + 4 * self.std_dev
+        return start, end
+
+    def plot_pdf_on_axis(self, ax: Axes) -> None:
+        start, end = self._get_plot_range()
+        x = np.linspace(start, end, 1000)
+        y = self.calculate_pdf(x)
+        ax.plot(x, y)
+
+    def plot_cdf_on_axis(self, ax: Axes) -> None:
+        start, end = self._get_plot_range()
+        x = np.linspace(start, end, 1000)
+        y = self.calculate_cdf(x)
+        ax.plot(x, y)
 
 
 class ScaledDistributionFunction(ContinuousDistributionFunction):
@@ -39,6 +86,15 @@ class ScaledDistributionFunction(ContinuousDistributionFunction):
     def statistics(self) -> Statistics:
         return self.inner.statistics.apply_algebraic_function(self.algebraic_function)
 
+    def calculate_pdf(self, x: np.ndarray) -> np.ndarray:
+        return self.inner.calculate_pdf(self.algebraic_function.apply_inverse(x)) / abs(self.algebraic_function.scale)
+
+    def calculate_cdf(self, x: np.ndarray) -> np.ndarray:
+        return self.inner.calculate_cdf(self.algebraic_function.apply_inverse(x))
+
+    def calculate_inverse_cdf(self, x: np.ndarray) -> np.ndarray:
+        return self.algebraic_function.apply(self.inner.calculate_inverse_cdf(x))
+
     def scale(self, x: float) -> "ScaledDistributionFunction":
         return ScaledDistributionFunction(inner=self.inner, algebraic_function=self.algebraic_function * x)
 
@@ -47,20 +103,6 @@ class ScaledDistributionFunction(ContinuousDistributionFunction):
 
     def sample_numpy(self, n: int) -> np.ndarray:
         return self.algebraic_function.apply(self.inner.sample_numpy(n))
-
-    def chance_that_rv_is_le(self, value: float) -> float:
-        scaled_v = self.algebraic_function.apply_inverse(value)
-        return self.inner.chance_that_rv_is_le(scaled_v)
-
-    def value_that_is_at_le_chance(self, chance: float) -> float:
-        inner_value = self.inner.value_that_is_at_le_chance(chance)
-        return self.algebraic_function.apply(inner_value)
-
-    def plot_pdf_on_axis(self, ax: Axes, af: AlgebraicFunction | None = None) -> None:
-        return self.inner.plot_pdf_on_axis(ax=ax, af=self.algebraic_function)
-
-    def plot_cdf_on_axis(self, ax: Axes, af: AlgebraicFunction | None = None) -> None:
-        return self.inner.plot_cdf_on_axis(ax=ax, af=self.algebraic_function)
 
     def _get_plot_range(self) -> tuple[float, float]:
         return self.algebraic_function.apply_on_range(self.inner._get_plot_range())

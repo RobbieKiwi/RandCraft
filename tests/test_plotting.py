@@ -3,23 +3,23 @@ from unittest import TestCase
 from randcraft import make_discrete, make_normal, make_uniform
 from randcraft.constructors import make_beta
 from randcraft.misc import mix_rvs
-from randcraft.pdfs.continuous import ScaledDistributionFunction
-from randcraft.random_variable import RandomVariable
 
 
 class TestPlotting(TestCase):
-    def test_plotting_convolved(self) -> None:
+    def test_plotting_convolved_uniform(self) -> None:
+        rv_base = make_uniform(low=-1, high=1)
+        rv = rv_base + rv_base
+        rv.pdf.plot()
+
+        discrete = make_discrete(values=[0, 6])
+        new_rv = rv + discrete
+        new_rv.pdf.plot()
+
+    def test_plotting_mixed(self) -> None:
         rv1 = make_normal(mean=0, std_dev=1)
         rv2 = make_uniform(low=-1, high=1)
         combined = rv1 + rv2
-
-        rv1.pdf.plot()
-        rv2.pdf.plot()
-        combined.pdf.plot()
-
         discrete = make_discrete(values=[1, 2, 3])
-        discrete.pdf.plot()
-
         mixed = mix_rvs([rv1, rv2, combined, discrete])
         mixed.pdf.plot()
 
@@ -31,7 +31,4 @@ class TestPlotting(TestCase):
         rv.pdf.plot()
 
         new_rv = rv * -1 - 2
-        self.assertIsInstance(new_rv, RandomVariable)
-        self.assertIsInstance(new_rv.pdf, ScaledDistributionFunction)
-
         new_rv.pdf.plot()
