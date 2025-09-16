@@ -1,9 +1,8 @@
 from functools import cached_property
 
 import numpy as np
-from matplotlib.axes import Axes
 
-from randcraft.models import Statistics, certainly
+from randcraft.models import DiscretePdf, Statistics, certainly
 from randcraft.pdfs.base import ProbabilityDistributionFunction
 
 
@@ -37,6 +36,20 @@ class DiscreteDistributionFunction(ProbabilityDistributionFunction):
     def probabilities(self) -> list[float]:
         return self._probabilities.tolist()
 
+    def _get_discrete_points(self) -> np.ndarray:
+        return np.array(self.values)
+
+    def calculate_continuous_pdf(self, x: np.ndarray) -> None:
+        return None
+
+    def calculate_discrete_pdf(self) -> DiscretePdf:
+        return DiscretePdf(x=self._values, y=self._probabilities)
+
+    def calculate_cdf(self, x: np.ndarray) -> np.ndarray:
+        cdf = np.array([float(np.sum(self._probabilities[self._values <= xi])) for xi in x])
+        cdf[x >= np.max(self._values)] = 1.0
+        return cdf
+
     def scale(self, x: float) -> "DiscreteDistributionFunction":
         x = float(x)
         return DiscreteDistributionFunction(
@@ -68,19 +81,6 @@ class DiscreteDistributionFunction(ProbabilityDistributionFunction):
         if buffer == 0.0:
             buffer = max(1.0, abs(min_value))
         return min_value - buffer, max_value + buffer
-
-    def plot_pdf_on_axis(self, ax: Axes) -> None:
-        for x, p in zip(self._values, self._probabilities):
-            ax.vlines(x, 0, p, colors="C0", linewidth=2)
-            ax.scatter(x, p, color="C0", s=50, zorder=5)
-        return
-
-    def plot_cdf_on_axis(self, ax: Axes) -> None:
-        cumulative_prob = np.cumsum(self._probabilities)
-        min_plot, max_plot = self._get_plot_range()
-        cumulative_prob = np.concatenate(([0.0], cumulative_prob, [1.0]))
-        values = np.concatenate(([min_plot], self._values, [max_plot]))
-        ax.step(values, cumulative_prob, where="post")
 
     def copy(self) -> "DiscreteDistributionFunction":
         return DiscreteDistributionFunction(values=self.values, probabilities=self.probabilities)

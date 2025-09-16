@@ -5,7 +5,7 @@ import numpy as np
 from scipy.integrate import cumulative_trapezoid
 from scipy.signal import fftconvolve
 
-from randcraft.models import Statistics, sum_uncertain_floats
+from randcraft.models import ContinuousPdf, Statistics, sum_uncertain_floats
 from randcraft.pdfs.continuous import ContinuousDistributionFunction
 from randcraft.pdfs.discrete import DiracDeltaDistributionFunction, DiscreteDistributionFunction
 
@@ -60,9 +60,9 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
             support=(min_value, max_value),
         )
 
-    def calculate_pdf(self, x: np.ndarray) -> np.ndarray:
+    def calculate_continuous_pdf(self, x: np.ndarray) -> ContinuousPdf:
         if not self.has_discrete_pdf:
-            return self._calculate_continuous_pdf(x)
+            return ContinuousPdf(x=x, y=self._calculate_continuous_pdf(x))
 
         result = np.zeros_like(x)
 
@@ -85,11 +85,11 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
             valid = indices >= 0
             result[valid] += scale * unique_continuous[indices[valid]]
 
-        return result
+        return ContinuousPdf(x=x, y=result)
 
     def _calculate_continuous_pdf(self, x: np.ndarray) -> np.ndarray:
         if len(self.continuous_pdfs) == 1:
-            return self.continuous_pdfs[0].calculate_pdf(x)
+            return self.continuous_pdfs[0].calculate_continuous_pdf(x).y
 
         assert x.ndim == 1, "Input numpy array must be 1D"
         low = np.min(x)
@@ -98,7 +98,7 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
         start = low - spread
         end = high + spread
         x2 = np.linspace(start, end, len(x) * 3)
-        raw_pdfs = [pdf.calculate_pdf(x2) for pdf in self.continuous_pdfs]
+        raw_pdfs = [pdf.calculate_continuous_pdf(x2).y for pdf in self.continuous_pdfs]
         combined_pdf = fftconvolve(raw_pdfs[0], raw_pdfs[1], mode="same")
         for pdf in raw_pdfs[2:]:
             combined_pdf = fftconvolve(combined_pdf, pdf, mode="same")
@@ -130,7 +130,7 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
             upper = mean + 3 * std_dev
 
         x_values = np.linspace(lower, upper, 10000)
-        pdf_vals = self.calculate_pdf(x_values)
+        pdf_vals = self.calculate_continuous_pdf(x_values).y
 
         cdf_vals = cumulative_trapezoid(pdf_vals, x_values, initial=0)
         if cdf_vals[-1] < 1:

@@ -3,7 +3,7 @@ from functools import cached_property
 import numpy as np
 from scipy.stats._distn_infrastructure import rv_continuous, rv_continuous_frozen
 
-from randcraft.models import AlgebraicFunction, Statistics, certainly
+from randcraft.models import AlgebraicFunction, ContinuousPdf, Statistics, certainly
 from randcraft.pdfs.continuous import ContinuousDistributionFunction, ScaledDistributionFunction
 
 
@@ -52,9 +52,9 @@ class ScipyDistributionFunction(ContinuousDistributionFunction):
         def scale_with_scale_distribution() -> ScaledDistributionFunction:
             return ScaledDistributionFunction(inner=self, algebraic_function=af)
 
-        has_infinite_lower_support = self.scipy_rv.support()[0] == -np.inf
-        has_infinite_upper_support = self.scipy_rv.support()[1] == np.inf
-        has_finite_support_on_one_side = not (has_infinite_lower_support and has_infinite_upper_support)
+        has_finite_support_on_one_side = not (
+            self.statistics.has_infinite_lower_support and self.statistics.has_infinite_upper_support
+        )
 
         if has_finite_support_on_one_side and af.scale < 0:
             return scale_with_scale_distribution()
@@ -92,8 +92,8 @@ class ScipyDistributionFunction(ContinuousDistributionFunction):
     def sample_numpy(self, n: int) -> np.ndarray:
         return self.scipy_rv.rvs(size=n)
 
-    def calculate_pdf(self, x: np.ndarray) -> np.ndarray:
-        return self.scipy_rv.pdf(x)
+    def calculate_continuous_pdf(self, x: np.ndarray) -> ContinuousPdf:
+        return ContinuousPdf(x=x, y=self.scipy_rv.pdf(x))
 
     def calculate_cdf(self, x: np.ndarray) -> np.ndarray:
         return self.scipy_rv.cdf(x)
