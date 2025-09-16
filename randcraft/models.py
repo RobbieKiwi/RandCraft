@@ -211,15 +211,3 @@ class ContinuousPdf:
 class DiscretePdf:
     x: np.ndarray
     y: np.ndarray
-
-
-@dataclass(frozen=True)
-class FullPdf:
-    continuous: ContinuousPdf | None = None
-    discrete: DiscretePdf | None = None
-
-
-@dataclass(frozen=True)
-class Cdf:
-    x: np.ndarray
-    y: np.ndarray
