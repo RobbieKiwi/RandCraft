@@ -1,7 +1,6 @@
 from functools import cached_property
 
 import numpy as np
-from matplotlib.axes import Axes
 
 from randcraft.models import DiscretePdf, Statistics, certainly
 from randcraft.pdfs.base import ProbabilityDistributionFunction
