@@ -71,7 +71,7 @@ class AnonymousDistributionFunction(ContinuousDistributionFunction):
         x_values, cumulative_probs = self.cdf
         return np.interp(x, x_values, cumulative_probs)
 
-    def calculate_pdf(self, x: np.ndarray) -> np.ndarray:
+    def calculate_continuous_pdf(self, x: np.ndarray) -> np.ndarray:
         kde = gaussian_kde(self._sorted_samples)
         return kde(x)
 

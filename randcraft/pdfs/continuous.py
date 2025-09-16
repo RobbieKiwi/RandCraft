@@ -2,21 +2,28 @@ from abc import ABC, abstractmethod
 from typing import Self
 
 import numpy as np
-from matplotlib.axes import Axes
 
-from randcraft.models import AlgebraicFunction, Statistics
+from randcraft.models import AlgebraicFunction, ContinuousPdf, Statistics
 from randcraft.pdfs.base import ProbabilityDistributionFunction
 
 
 class ContinuousDistributionFunction(ProbabilityDistributionFunction, ABC):
     @abstractmethod
-    def calculate_pdf(self, x: np.ndarray) -> np.ndarray: ...
-
-    @abstractmethod
-    def calculate_cdf(self, x: np.ndarray) -> np.ndarray: ...
+    def calculate_continuous_pdf(self, x: np.ndarray) -> ContinuousPdf: ...
 
     @abstractmethod
     def calculate_inverse_cdf(self, x: np.ndarray) -> np.ndarray: ...
+
+    def calculate_discrete_pdf(self) -> None:
+        return None
+
+    def _get_discrete_points(self) -> np.ndarray:
+        points: list[float] = []
+        if not self.statistics.has_infinite_lower_support:
+            points.append(self.statistics.min_value.value)
+        if not self.statistics.has_infinite_upper_support:
+            points.append(self.statistics.max_value.value)
+        return np.array(points)
 
     def chance_that_rv_is_le(self, value: float) -> float:
         if value < self.min_value:
@@ -42,26 +49,14 @@ class ContinuousDistributionFunction(ProbabilityDistributionFunction, ABC):
 
     def _get_plot_range(self) -> tuple[float, float]:
         if not np.isinf(self.min_value):
-            start = self.min_value
+            start = self.min_value - 0.1 * self.std_dev
         else:
             start = self.mean - 4 * self.std_dev
         if not np.isinf(self.max_value):
-            end = self.max_value
+            end = self.max_value + 0.1 * self.std_dev
         else:
             end = self.mean + 4 * self.std_dev
         return start, end
-
-    def plot_pdf_on_axis(self, ax: Axes) -> None:
-        start, end = self._get_plot_range()
-        x = np.linspace(start, end, 1000)
-        y = self.calculate_pdf(x)
-        ax.plot(x, y)
-
-    def plot_cdf_on_axis(self, ax: Axes) -> None:
-        start, end = self._get_plot_range()
-        x = np.linspace(start, end, 1000)
-        y = self.calculate_cdf(x)
-        ax.plot(x, y)
 
 
 class ScaledDistributionFunction(ContinuousDistributionFunction):
@@ -86,8 +81,11 @@ class ScaledDistributionFunction(ContinuousDistributionFunction):
     def statistics(self) -> Statistics:
         return self.inner.statistics.apply_algebraic_function(self.algebraic_function)
 
-    def calculate_pdf(self, x: np.ndarray) -> np.ndarray:
-        return self.inner.calculate_pdf(self.algebraic_function.apply_inverse(x)) / abs(self.algebraic_function.scale)
+    def calculate_continuous_pdf(self, x: np.ndarray) -> ContinuousPdf:
+        y = self.inner.calculate_continuous_pdf(self.algebraic_function.apply_inverse(x)).y / abs(
+            self.algebraic_function.scale
+        )
+        return ContinuousPdf(x=x, y=y)
 
     def calculate_cdf(self, x: np.ndarray) -> np.ndarray:
         return self.inner.calculate_cdf(self.algebraic_function.apply_inverse(x))

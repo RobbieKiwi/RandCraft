@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 
-from randcraft.models import AlgebraicFunction, Statistics
+from randcraft.models import ContinuousPdf, DiscretePdf, Statistics
 
 type PdfPlotType = Literal["pdf", "cdf", "both"]
 
@@ -35,13 +35,19 @@ class ProbabilityDistributionFunction(ABC):
     def add_constant(self, x: float) -> "ProbabilityDistributionFunction": ...
 
     @abstractmethod
-    def plot_pdf_on_axis(self, ax: Axes, af: AlgebraicFunction | None = None) -> None: ...
+    def calculate_continuous_pdf(self, x: np.ndarray) -> ContinuousPdf | None: ...
 
     @abstractmethod
-    def plot_cdf_on_axis(self, ax: Axes, af: AlgebraicFunction | None = None) -> None: ...
+    def calculate_discrete_pdf(self) -> DiscretePdf | None: ...
+
+    @abstractmethod
+    def calculate_cdf(self, x: np.ndarray) -> np.ndarray: ...
 
     @abstractmethod
     def _get_plot_range(self) -> tuple[float, float]: ...
+
+    @abstractmethod
+    def _get_discrete_points(self) -> np.ndarray: ...
 
     @abstractmethod
     def copy(self) -> Self: ...
@@ -77,6 +83,14 @@ class ProbabilityDistributionFunction(ABC):
         return self.stats.max_value.value
 
     def plot(self, kind: PdfPlotType = "both") -> None:
+        start, end = self._get_plot_range()
+        discrete_points = self._get_discrete_points()
+        x = np.linspace(start, end, 1000)
+        if len(discrete_points) > 0:
+            step = (x[1] - x[0]) / 100  # TODO Use double index instead of small step
+            x = np.unique(np.concatenate([x, discrete_points - step, discrete_points]))
+            x.sort()
+
         v_lines = [(self.mean, "red", "mean")]
         if self.variance > 0:
             v_lines.append((self.mean - self.std_dev, "orange", "-1 std_dev"))
@@ -84,11 +98,11 @@ class ProbabilityDistributionFunction(ABC):
 
         def _plot(is_cumulative: bool, ax: Axes) -> None:
             if is_cumulative:
-                self.plot_cdf_on_axis(ax=ax)
+                self.plot_cdf_on_axis(ax=ax, x=x)
                 ax.set_title("CDF")
                 ax.set_ylim(0.0, 1.01)
             else:
-                self.plot_pdf_on_axis(ax=ax)
+                self.plot_pdf_on_axis(ax=ax, x=x)
                 ax.set_title("PDF")
                 ax.set_ylim(bottom=0)
             ax.set_xlabel("x")
@@ -116,6 +130,22 @@ class ProbabilityDistributionFunction(ABC):
         plt.tight_layout()
         fig.set_size_inches(10, 6)
         plt.show()
+
+    def plot_pdf_on_axis(self, ax: Axes, x: np.ndarray) -> None:
+        cont_pdf = self.calculate_continuous_pdf(x)
+        if cont_pdf is not None:
+            ax.plot(cont_pdf.x, cont_pdf.y)
+
+        disc_pdf = self.calculate_discrete_pdf()
+        if disc_pdf is not None:
+            for x, p in zip(disc_pdf.x, disc_pdf.y):
+                ax.vlines(x, 0, p, colors="C0", linewidth=2)
+                ax.scatter(x, p, color="C0", s=50, zorder=5)
+        return
+
+    def plot_cdf_on_axis(self, ax: Axes, x: np.ndarray) -> None:
+        y = self.calculate_cdf(x)
+        ax.plot(x, y)
 
 
 T_Pdf = TypeVar("T_Pdf", bound=ProbabilityDistributionFunction)

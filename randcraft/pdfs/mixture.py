@@ -2,9 +2,8 @@ from collections.abc import Sequence
 from functools import cached_property
 
 import numpy as np
-from matplotlib.axes import Axes
 
-from randcraft.models import Statistics, sum_uncertain_floats
+from randcraft.models import ContinuousPdf, DiscretePdf, Statistics, sum_uncertain_floats
 from randcraft.pdfs.anonymous import AnonymousDistributionFunction
 from randcraft.pdfs.base import ProbabilityDistributionFunction
 from randcraft.pdfs.continuous import ContinuousDistributionFunction
@@ -73,6 +72,9 @@ class MixtureDistributionFunction(ProbabilityDistributionFunction):
             sampler=self.sample_numpy, n_samples=10000, external_statistics=self.statistics
         )
 
+    def _get_discrete_points(self) -> np.ndarray:
+        return np.sort(np.unique(np.concatenate([pdf._get_discrete_points() for pdf in self.pdfs])))
+
     def scale(self, x: float) -> "MixtureDistributionFunction":
         x = float(x)
         return MixtureDistributionFunction(pdfs=[pdf.scale(x) for pdf in self.pdfs], probabilities=self.probabilities)
@@ -102,29 +104,56 @@ class MixtureDistributionFunction(ProbabilityDistributionFunction):
         # Use numerical approximation
         return self._anonymous_pdf.value_that_is_at_le_chance(chance=chance)
 
+    def calculate_cdf(self, x: np.ndarray) -> np.ndarray:
+        cdf = np.sum([pdf.calculate_cdf(x) * p for pdf, p in zip(self.pdfs, self.probabilities)], axis=0)
+        cdf[x > self.statistics.max_value.value] = 1.0
+        cdf[x <= self.statistics.min_value.value] = 0.0
+        return cdf
+
+    def calculate_continuous_pdf(self, x: np.ndarray) -> ContinuousPdf | None:
+        pdf_prob_pairs = [
+            (pdf, p) for pdf, p in zip(self.pdfs, self.probabilities) if isinstance(pdf, ContinuousDistributionFunction)
+        ]
+        if not len(pdf_prob_pairs):
+            return None
+        y = np.zeros_like(x)
+        for pdf, p in pdf_prob_pairs:
+            cont_pdf = pdf.calculate_continuous_pdf(x)
+            assert cont_pdf is not None
+            y += cont_pdf.y * p
+        return ContinuousPdf(x=x, y=y)
+
+    def calculate_discrete_pdf(self) -> DiscretePdf | None:
+        pdf_prob_pairs = [
+            (pdf, p) for pdf, p in zip(self.pdfs, self.probabilities) if isinstance(pdf, DiscreteDistributionFunction)
+        ]
+        if not len(pdf_prob_pairs):
+            return None
+
+        value_probs: dict[float, float] = {}
+        for pdf, p in pdf_prob_pairs:
+            disc_pdf = pdf.calculate_discrete_pdf()
+            assert disc_pdf is not None
+            for v, prob in zip(disc_pdf.x, disc_pdf.y):
+                if v in value_probs:
+                    value_probs[v] += prob * p
+                else:
+                    value_probs[v] = prob * p
+        values, probs = zip(*sorted(value_probs.items()))
+        y = np.array(probs)
+        x = np.array(values)
+        return DiscretePdf(x=x, y=y)
+
     def _get_plot_range(self) -> tuple[float, float]:
-        if np.isinf(self.min_value) or np.isinf(self.max_value):
-            start = self.mean - self.std_dev * 3
-            end = self.mean + self.std_dev * 3
-            return start, end
-
-        min_value = self.min_value
-        max_value = self.max_value
-        low_high_range = max_value - min_value
-        start = min_value - 0.1 * low_high_range
-        end = max_value + 0.1 * low_high_range
+        lows: list[float] = []
+        highs: list[float] = []
+        for pdf in self.pdfs:
+            low, high = pdf._get_plot_range()
+            lows.append(low)
+            highs.append(high)
+        start = min(lows)
+        end = max(highs)
         return start, end
-
-    def plot_pdf_on_axis(self, ax: Axes) -> None:
-        # Use numerical approximation
-        return self._anonymous_pdf.plot_pdf_on_axis(ax=ax)
-
-    def plot_cdf_on_axis(self, ax: Axes) -> None:
-        start, end = self._get_plot_range()
-        x_values = np.arange(start=start, stop=end, step=(end - start) / 1000)
-        probabilities = [self.chance_that_rv_is_le(value=float(x)) for x in x_values]
-        ax.plot(x_values, probabilities)
-        ax.set_xlim(start, end)
 
     def copy(self) -> "MixtureDistributionFunction":
         return MixtureDistributionFunction(pdfs=self.pdfs, probabilities=self.probabilities)

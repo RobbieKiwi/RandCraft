@@ -108,6 +108,14 @@ class Statistics:
     def max_value(self) -> Uncertainty[float]:
         return self.support[1]
 
+    @property
+    def has_infinite_lower_support(self) -> bool:
+        return self.min_value.value == -np.inf
+
+    @property
+    def has_infinite_upper_support(self) -> bool:
+        return self.max_value.value == np.inf
+
     def get(
         self, name: Literal["mean", "variance", "std_dev", "min_value", "max_value"], certain: bool = False
     ) -> float:
@@ -191,3 +199,27 @@ class AlgebraicFunction:
             return x_range
         processed = self.apply(np.array(x_range))
         return float(np.min(processed)), float(np.max(processed))
+
+
+@dataclass(frozen=True)
+class ContinuousPdf:
+    x: np.ndarray
+    y: np.ndarray
+
+
+@dataclass(frozen=True)
+class DiscretePdf:
+    x: np.ndarray
+    y: np.ndarray
+
+
+@dataclass(frozen=True)
+class FullPdf:
+    continuous: ContinuousPdf | None = None
+    discrete: DiscretePdf | None = None
+
+
+@dataclass(frozen=True)
+class Cdf:
+    x: np.ndarray
+    y: np.ndarray
