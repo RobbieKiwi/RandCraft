@@ -5,12 +5,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 
-from randcraft.models import ContinuousPdf, DiscretePdf, Statistics
+from randcraft.models import ProbabilityDensityFunction, ProbabilityMassFunction, Statistics
 
 type PdfPlotType = Literal["pdf", "cdf", "both"]
 
 
-class ProbabilityDistributionFunction(ABC):
+class RV(ABC):
     @property
     @abstractmethod
     def short_name(self) -> str: ...
@@ -23,25 +23,22 @@ class ProbabilityDistributionFunction(ABC):
     def sample_numpy(self, n: int) -> np.ndarray: ...
 
     @abstractmethod
-    def chance_that_rv_is_le(self, value: float) -> float: ...
+    def scale(self, x: float) -> "RV": ...
 
     @abstractmethod
-    def value_that_is_at_le_chance(self, chance: float) -> float: ...
+    def add_constant(self, x: float) -> "RV": ...
 
     @abstractmethod
-    def scale(self, x: float) -> "ProbabilityDistributionFunction": ...
+    def calculate_pdf(self, x: np.ndarray) -> ProbabilityDensityFunction | None: ...
 
     @abstractmethod
-    def add_constant(self, x: float) -> "ProbabilityDistributionFunction": ...
+    def calculate_pmf(self) -> ProbabilityMassFunction | None: ...
 
     @abstractmethod
-    def calculate_continuous_pdf(self, x: np.ndarray) -> ContinuousPdf | None: ...
+    def cdf(self, x: np.ndarray) -> np.ndarray: ...
 
     @abstractmethod
-    def calculate_discrete_pdf(self) -> DiscretePdf | None: ...
-
-    @abstractmethod
-    def calculate_cdf(self, x: np.ndarray) -> np.ndarray: ...
+    def ppf(self, q: np.ndarray) -> np.ndarray: ...
 
     @abstractmethod
     def _get_plot_range(self) -> tuple[float, float]: ...
@@ -132,11 +129,11 @@ class ProbabilityDistributionFunction(ABC):
         plt.show()
 
     def plot_pdf_on_axis(self, ax: Axes, x: np.ndarray) -> None:
-        cont_pdf = self.calculate_continuous_pdf(x)
+        cont_pdf = self.calculate_pdf(x)
         if cont_pdf is not None:
             ax.plot(cont_pdf.x, cont_pdf.y)
 
-        disc_pdf = self.calculate_discrete_pdf()
+        disc_pdf = self.calculate_pmf()
         if disc_pdf is not None:
             for x, p in zip(disc_pdf.x, disc_pdf.y):
                 ax.vlines(x, 0, p, colors="C0", linewidth=2)
@@ -144,8 +141,8 @@ class ProbabilityDistributionFunction(ABC):
         return
 
     def plot_cdf_on_axis(self, ax: Axes, x: np.ndarray) -> None:
-        y = self.calculate_cdf(x)
+        y = self.cdf(x)
         ax.plot(x, y)
 
 
-T_Pdf = TypeVar("T_Pdf", bound=ProbabilityDistributionFunction)
+T_RV = TypeVar("T_RV", bound=RV)

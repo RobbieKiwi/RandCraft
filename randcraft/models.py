@@ -116,9 +116,7 @@ class Statistics:
     def has_infinite_upper_support(self) -> bool:
         return self.max_value.value == np.inf
 
-    def get(
-        self, name: Literal["mean", "variance", "std_dev", "min_value", "max_value"], certain: bool = False
-    ) -> float:
+    def get(self, name: Literal["mean", "variance", "std_dev", "min_value", "max_value"], certain: bool = False) -> float:
         uncertainty = {
             "mean": self.mean,
             "variance": self.variance,
@@ -202,12 +200,40 @@ class AlgebraicFunction:
 
 
 @dataclass(frozen=True)
-class ContinuousPdf:
+class ProbabilityDensityFunction:
     x: np.ndarray
     y: np.ndarray
+
+    def pdf(self, x: np.ndarray) -> np.ndarray:
+        return np.interp(x, self.x, self.y, left=0.0, right=0.0)
 
 
 @dataclass(frozen=True)
-class DiscretePdf:
+class ProbabilityMassFunction:
     x: np.ndarray
     y: np.ndarray
+
+    def cdf(self, x: np.ndarray) -> np.ndarray:
+        cumulative_probs = np.cumsum(self.y)
+        result = np.empty_like(x, dtype=self.x.dtype)
+        for i, xi in enumerate(x):
+            idx = np.searchsorted(self.x, xi, side="right") - 1
+            if idx < 0:
+                result[i] = 0.0
+            elif idx >= len(cumulative_probs):
+                result[i] = 1.0
+            else:
+                result[i] = cumulative_probs[idx]
+        return result
+
+    def pmf(self, x: np.ndarray) -> np.ndarray:
+        # For values with corresponding y, return y, else return 0.0
+        return np.array([float(np.sum(self.y[self.x == xi])) for xi in x])
+
+    def ppf(self, q: np.ndarray) -> np.ndarray:
+        cumulative_probs = np.cumsum(self.y)
+        result = np.empty_like(q, dtype=self.x.dtype)
+        for i, quantile in enumerate(q):
+            idx = np.searchsorted(cumulative_probs, quantile, side="left")
+            result[i] = self.x[min(idx, len(self.x) - 1)]
+        return result

@@ -5,14 +5,14 @@ from functools import cached_property
 import numpy as np
 from scipy.stats import gaussian_kde
 
-from randcraft.models import Statistics, maybe
-from randcraft.pdfs.continuous import ContinuousDistributionFunction
-from randcraft.pdfs.discrete import DiscreteDistributionFunction
+from randcraft.models import ProbabilityDensityFunction, Statistics, maybe
+from randcraft.rvs.continuous import ContinuousRV
+from randcraft.rvs.discrete import DiscreteRV
 
 logger = logging.getLogger(__name__)
 
 
-class AnonymousDistributionFunction(ContinuousDistributionFunction):
+class AnonymousRV(ContinuousRV):  # TODO Make this directly build a kde pdf internally? Check plotting for this. PDF and CDF should be consistent
     def __init__(
         self,
         sampler: Callable[[int], np.ndarray],
@@ -46,12 +46,12 @@ class AnonymousDistributionFunction(ContinuousDistributionFunction):
         unique_factor = len(np.unique(samples)) / len(samples)
         if unique_factor < 0.99:
             logger.warning(
-                f"It appears that the provided sampler is not continuous. {self.__class__.__name__} is designed to handle continuous distributions, consider using {DiscreteDistributionFunction.__name__} instead"
+                f"It appears that the provided sampler is not continuous. {self.__class__.__name__} is designed to handle continuous distributions, consider using {DiscreteRV.__name__} instead"
             )
         return np.sort(samples)
 
     @cached_property
-    def cdf(self) -> tuple[np.ndarray, np.ndarray]:
+    def _cdf(self) -> tuple[np.ndarray, np.ndarray]:
         """
         Returns two numpy arrays (x_values, cumulative_probabilities) representing the CDF.
         The chance that x < value can be found by interpolating cumulative_probabilities at value.
@@ -60,22 +60,30 @@ class AnonymousDistributionFunction(ContinuousDistributionFunction):
         cumulative_probs = np.arange(1, len(x_values) + 1) / len(x_values)
         return x_values, cumulative_probs
 
+    @cached_property
+    def _pdf(self) -> ProbabilityDensityFunction:
+        start = self._sorted_samples[0]
+        end = self._sorted_samples[-1]
+        x = np.linspace(start, end, 1000)
+        return self.calculate_pdf(x)
+
     def sample_numpy(self, n: int) -> np.ndarray:
         return self._sampler(n)
 
-    def calculate_inverse_cdf(self, x: np.ndarray) -> np.ndarray:
-        x_values, cumulative_probs = self.cdf
+    def ppf(self, x: np.ndarray) -> np.ndarray:
+        x_values, cumulative_probs = self._cdf
         return np.interp(x, cumulative_probs, x_values)
 
-    def calculate_cdf(self, x: np.ndarray) -> np.ndarray:
-        x_values, cumulative_probs = self.cdf
+    def cdf(self, x: np.ndarray) -> np.ndarray:
+        x_values, cumulative_probs = self._cdf
         return np.interp(x, x_values, cumulative_probs)
 
-    def calculate_continuous_pdf(self, x: np.ndarray) -> np.ndarray:
-        kde = gaussian_kde(self._sorted_samples)
-        return kde(x)
+    def pdf(self, x: np.ndarray) -> np.ndarray:
+        return self._pdf.pdf(x)
 
-    def copy(self) -> "AnonymousDistributionFunction":
-        return AnonymousDistributionFunction(
-            sampler=self._sampler, n_samples=self._n_samples, external_statistics=self._external_statistics
-        )
+    def calculate_pdf(self, x: np.ndarray) -> ProbabilityDensityFunction:
+        kde = gaussian_kde(self._sorted_samples)
+        return ProbabilityDensityFunction(x=x, y=kde(x))
+
+    def copy(self) -> "AnonymousRV":
+        return AnonymousRV(sampler=self._sampler, n_samples=self._n_samples, external_statistics=self._external_statistics)

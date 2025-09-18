@@ -2,11 +2,11 @@ from functools import cached_property
 
 import numpy as np
 
-from randcraft.models import DiscretePdf, Statistics, certainly
-from randcraft.pdfs.base import ProbabilityDistributionFunction
+from randcraft.models import ProbabilityMassFunction, Statistics, certainly
+from randcraft.rvs.base import RV
 
 
-class DiscreteDistributionFunction(ProbabilityDistributionFunction):
+class DiscreteRV(RV):
     def __init__(self, values: list[float], probabilities: list[float] | None = None) -> None:
         if probabilities is None:
             probabilities = [1.0 / len(values)] * len(values)
@@ -36,42 +36,39 @@ class DiscreteDistributionFunction(ProbabilityDistributionFunction):
     def probabilities(self) -> list[float]:
         return self._probabilities.tolist()
 
+    @cached_property
+    def _pmf(self) -> ProbabilityMassFunction:
+        return self.calculate_pmf()
+
+    def pmf(self, x: np.ndarray) -> np.ndarray:
+        return self._pmf.pmf(x)
+
+    def cdf(self, x: np.ndarray) -> np.ndarray:
+        return self._pmf.cdf(x)
+
+    def ppf(self, q: np.ndarray) -> np.ndarray:
+        return self._pmf.ppf(q)
+
     def _get_discrete_points(self) -> np.ndarray:
         return np.array(self.values)
 
-    def calculate_continuous_pdf(self, x: np.ndarray) -> None:
+    def calculate_pdf(self, x: np.ndarray) -> None:
         return None
 
-    def calculate_discrete_pdf(self) -> DiscretePdf:
-        return DiscretePdf(x=self._values, y=self._probabilities)
+    def calculate_pmf(self) -> ProbabilityMassFunction:
+        return ProbabilityMassFunction(x=self._values, y=self._probabilities)
 
-    def calculate_cdf(self, x: np.ndarray) -> np.ndarray:
-        cdf = np.array([float(np.sum(self._probabilities[self._values <= xi])) for xi in x])
-        cdf[x >= np.max(self._values)] = 1.0
-        return cdf
-
-    def scale(self, x: float) -> "DiscreteDistributionFunction":
+    def scale(self, x: float) -> "DiscreteRV":
         x = float(x)
-        return DiscreteDistributionFunction(
-            values=[float(v * x) for v in self._values], probabilities=self._probabilities.tolist()
-        )
+        return DiscreteRV(values=[float(v * x) for v in self._values], probabilities=self._probabilities.tolist())
 
-    def add_constant(self, x: float) -> "DiscreteDistributionFunction":
+    def add_constant(self, x: float) -> "DiscreteRV":
         x = float(x)
-        return DiscreteDistributionFunction(
-            values=[float(v + x) for v in self._values], probabilities=self._probabilities.tolist()
-        )
+        return DiscreteRV(values=[float(v + x) for v in self._values], probabilities=self._probabilities.tolist())
 
     def sample_numpy(self, n: int) -> np.ndarray:
         rng = np.random.default_rng()
         return rng.choice(self._values, size=n, p=self._probabilities)
-
-    def chance_that_rv_is_le(self, value: float) -> float:
-        return float(np.sum(self._probabilities[self._values <= value]))
-
-    def value_that_is_at_le_chance(self, chance: float) -> float:
-        cumulative_prob = np.cumsum(self._probabilities)
-        return float(self._values[np.searchsorted(cumulative_prob, chance)])
 
     def _get_plot_range(self) -> tuple[float, float]:
         min_value = self.statistics.min_value.value
@@ -82,11 +79,11 @@ class DiscreteDistributionFunction(ProbabilityDistributionFunction):
             buffer = max(1.0, abs(min_value))
         return min_value - buffer, max_value + buffer
 
-    def copy(self) -> "DiscreteDistributionFunction":
-        return DiscreteDistributionFunction(values=self.values, probabilities=self.probabilities)
+    def copy(self) -> "DiscreteRV":
+        return DiscreteRV(values=self.values, probabilities=self.probabilities)
 
 
-class DiracDeltaDistributionFunction(DiscreteDistributionFunction):
+class DiracDeltaRV(DiscreteRV):
     def __init__(self, value: float) -> None:
         super().__init__(values=[value])
 
@@ -104,20 +101,23 @@ class DiracDeltaDistributionFunction(DiscreteDistributionFunction):
     def value(self) -> float:
         return float(self._values[0])
 
-    def scale(self, x: float) -> "DiracDeltaDistributionFunction":
-        return DiracDeltaDistributionFunction(value=self.mean * x)
+    def pmf(self, x: np.ndarray) -> np.ndarray:
+        return (x == self.value).astype(float) * 1.0
 
-    def add_constant(self, x: float) -> DiscreteDistributionFunction:
-        return DiracDeltaDistributionFunction(value=self.mean + x)
+    def cdf(self, x: np.ndarray) -> np.ndarray:
+        return (x >= self.value).astype(float) * 1.0
+
+    def ppf(self, q: np.ndarray) -> np.ndarray:
+        return np.ones_like(q) * self.value
+
+    def scale(self, x: float) -> "DiracDeltaRV":
+        return DiracDeltaRV(value=self.mean * x)
+
+    def add_constant(self, x: float) -> DiscreteRV:
+        return DiracDeltaRV(value=self.mean + x)
 
     def sample_numpy(self, n: int) -> np.ndarray:
         return np.ones(n) * self.value
 
-    def chance_that_rv_is_le(self, value: float) -> float:
-        return 1.0 if value >= self.value else 0.0
-
-    def value_that_is_at_le_chance(self, chance: float) -> float:
-        return self.value
-
-    def copy(self) -> "DiracDeltaDistributionFunction":
-        return DiracDeltaDistributionFunction(value=self.value)
+    def copy(self) -> "DiracDeltaRV":
+        return DiracDeltaRV(value=self.value)

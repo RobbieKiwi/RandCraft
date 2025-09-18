@@ -6,9 +6,9 @@ import numpy as np
 from scipy.stats import gaussian_kde
 
 from randcraft.constructors import make_discrete, make_normal
-from randcraft.pdfs.continuous import ContinuousDistributionFunction
-from randcraft.pdfs.discrete import DiscreteDistributionFunction
 from randcraft.random_variable import RandomVariable
+from randcraft.rvs.continuous import ContinuousRV
+from randcraft.rvs.discrete import DiscreteRV
 from randcraft.utils import weighted_std
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ def make_kde(
     """
     if kernel is not None:
         assert isinstance(kernel, RandomVariable), "Kernel must be a RandomVariable"
-        assert isinstance(kernel.pdf, ContinuousDistributionFunction), "Kernel must have a continuous distribution"
+        assert isinstance(kernel._rv, ContinuousRV), "Kernel must have a continuous distribution"
         assert bw_method is None, "Bw method must be none if kernel is provided"
         if kernel.get_mean() != 0.0:
             logger.warning("Kernel mean is not zero. This may lead to unexpected results.")
@@ -65,10 +65,8 @@ def make_kde(
 
     if isinstance(observations, RandomVariable):
         discrete_rv = observations
-        assert isinstance(discrete_rv.pdf, DiscreteDistributionFunction), (
-            "RandomVariable for observations must have a discrete distribution"
-        )
-        np_observations = np.array(discrete_rv.pdf.values)
+        assert isinstance(discrete_rv._rv, DiscreteRV), "RandomVariable for observations must have a discrete distribution"
+        np_observations = np.array(discrete_rv._rv.values)
     else:
         discrete_rv = make_discrete_rv_from_observations(observations=observations, weights=weights, reduce=True)
         np_observations = observations
@@ -79,9 +77,7 @@ def make_kde(
     return kernel + discrete_rv
 
 
-def make_kernel_using_scipy(
-    observations: np.ndarray, bw_method: str | float | Callable | None = None, weights: np.ndarray | None = None
-) -> RandomVariable:
+def make_kernel_using_scipy(observations: np.ndarray, bw_method: str | float | Callable | None = None, weights: np.ndarray | None = None) -> RandomVariable:
     kde_model = gaussian_kde(dataset=observations, bw_method=bw_method, weights=weights)
     factor: float = kde_model.factor  # type: ignore
     if weights is None:
@@ -92,9 +88,7 @@ def make_kernel_using_scipy(
     return make_normal(mean=0, std_dev=bandwidth)
 
 
-def reduce_observations(
-    observations: np.ndarray, weights: np.ndarray | None = None
-) -> tuple[np.ndarray, np.ndarray | None]:
+def reduce_observations(observations: np.ndarray, weights: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray | None]:
     """Reduce observations by grouping identical values and summing their weights."""
     assert len(observations) > 1, "Need multiple observations for KDE"
     assert observations.ndim == 1, "Input data must be a 1D numpy array"
@@ -109,9 +103,7 @@ def reduce_observations(
         return unique, None
 
 
-def make_discrete_rv_from_observations(
-    observations: np.ndarray, weights: np.ndarray | None = None, reduce: bool = True
-) -> RandomVariable:
+def make_discrete_rv_from_observations(observations: np.ndarray, weights: np.ndarray | None = None, reduce: bool = True) -> RandomVariable:
     if reduce:
         observations, weights = reduce_observations(observations=observations, weights=weights)
     return make_discrete(values=observations, probabilities=weights)

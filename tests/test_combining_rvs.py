@@ -2,11 +2,11 @@ import numpy as np
 
 from randcraft import make_anon, make_coin_flip, make_dirac, make_discrete, make_normal, make_uniform
 from randcraft.constructors import make_beta, make_die_roll
-from randcraft.pdfs import (
-    DiracDeltaDistributionFunction,
-    DiscreteDistributionFunction,
-)
 from randcraft.random_variable import RandomVariable
+from randcraft.rvs import (
+    DiracDeltaRV,
+    DiscreteRV,
+)
 from tests.base_test_case import BaseTestCase
 
 
@@ -109,7 +109,7 @@ class TestCombiningRvs(BaseTestCase):
         self.assertIsInstance(rv_zero_scale, RandomVariable)
         self.assertAlmostEqual(rv_zero_scale.get_mean(), 0.0)
         self.assertAlmostEqual(rv_zero_scale.get_variance(), 0.0)
-        self.assertIsInstance(rv_zero_scale.pdf, DiracDeltaDistributionFunction)
+        self.assertIsInstance(rv_zero_scale._rv, DiracDeltaRV)
 
     def test_uniform_known_convolutions(self) -> None:
         rv1 = make_uniform(low=0, high=10)
@@ -137,13 +137,13 @@ class TestCombiningRvs(BaseTestCase):
         dice = make_discrete(values=[1, 2, 3, 4, 5, 6])
         two_dice = dice + dice
         self.assertIsInstance(two_dice, RandomVariable)
-        self.assertIsInstance(two_dice.pdf, DiscreteDistributionFunction)
+        self.assertIsInstance(two_dice._rv, DiscreteRV)
         self.assertAlmostEqual(two_dice.get_mean(exact=True), 7.0)
 
         one = make_dirac(value=1)
         two_dice_and_one = dice * 2 + one
         self.assertIsInstance(two_dice_and_one, RandomVariable)
-        self.assertIsInstance(two_dice_and_one.pdf, DiscreteDistributionFunction)
+        self.assertIsInstance(two_dice_and_one._rv, DiscreteRV)
         self.assertAlmostEqual(two_dice_and_one.get_mean(exact=True), 8.0)
 
     def test_discrete_and_continuous_convolution(self) -> None:

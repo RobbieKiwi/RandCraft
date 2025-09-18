@@ -1,7 +1,7 @@
 from scipy.stats import beta, uniform
 
 from randcraft.constructors import make_scipy
-from randcraft.pdfs.scipy_pdf import ScipyDistributionFunction
+from randcraft.rvs.scipy_pdf import SciRV
 from tests.base_test_case import BaseTestCase
 
 
@@ -11,7 +11,7 @@ class TestScipyRvs(BaseTestCase):
         b = rv * 2
         b = rv * 1
 
-        self.assertIsInstance(b.pdf, ScipyDistributionFunction)
+        self.assertIsInstance(b._rv, SciRV)
         self.assertEqual(b.get_mean(), rv.get_mean())
 
     def test_beta_rv(self) -> None:

@@ -5,21 +5,19 @@ import numpy as np
 from scipy.integrate import cumulative_trapezoid
 from scipy.signal import fftconvolve
 
-from randcraft.models import ContinuousPdf, Statistics, sum_uncertain_floats
-from randcraft.pdfs.continuous import ContinuousDistributionFunction
-from randcraft.pdfs.discrete import DiracDeltaDistributionFunction, DiscreteDistributionFunction
+from randcraft.models import ProbabilityDensityFunction, Statistics, sum_uncertain_floats
+from randcraft.rvs.continuous import ContinuousRV
+from randcraft.rvs.discrete import DiracDeltaRV, DiscreteRV
 
 
-class MultiDistributionFunction(ContinuousDistributionFunction):
+class MultiRV(ContinuousRV):
     def __init__(
         self,
-        continuous_pdfs: list[ContinuousDistributionFunction],
-        discrete_pdf: DiscreteDistributionFunction = DiracDeltaDistributionFunction(value=0.0),
+        continuous_pdfs: list[ContinuousRV],
+        discrete_pdf: DiscreteRV = DiracDeltaRV(value=0.0),
     ) -> None:
         assert len(continuous_pdfs) > 0, "At least one continuous pdf is required"
-        assert isinstance(discrete_pdf, DiscreteDistributionFunction), (
-            f"discrete_pdf must be a {DiscreteDistributionFunction.__name__}, got {type(discrete_pdf)}"
-        )
+        assert isinstance(discrete_pdf, DiscreteRV), f"discrete_pdf must be a {DiscreteRV.__name__}, got {type(discrete_pdf)}"
         self._continuous_pdfs = continuous_pdfs
         self._discrete_pdf = discrete_pdf
 
@@ -28,20 +26,20 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
         return "multi"
 
     @cached_property
-    def pdfs(self) -> Sequence[ContinuousDistributionFunction | DiscreteDistributionFunction]:
+    def pdfs(self) -> Sequence[ContinuousRV | DiscreteRV]:
         return self.continuous_pdfs + ([self._discrete_pdf] if self._discrete_pdf is not None else [])
 
     @property
-    def continuous_pdfs(self) -> list[ContinuousDistributionFunction]:
+    def continuous_pdfs(self) -> list[ContinuousRV]:
         return self._continuous_pdfs
 
     @cached_property
-    def discrete_pdf(self) -> DiscreteDistributionFunction:
+    def discrete_pdf(self) -> DiscreteRV:
         return self._discrete_pdf
 
     @cached_property
     def has_discrete_pdf(self) -> bool:
-        if isinstance(self.discrete_pdf, DiracDeltaDistributionFunction) and self.discrete_pdf.value == 0.0:
+        if isinstance(self.discrete_pdf, DiracDeltaRV) and self.discrete_pdf.value == 0.0:
             return False
         return True
 
@@ -60,9 +58,9 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
             support=(min_value, max_value),
         )
 
-    def calculate_continuous_pdf(self, x: np.ndarray) -> ContinuousPdf:
+    def calculate_pdf(self, x: np.ndarray) -> ProbabilityDensityFunction:
         if not self.has_discrete_pdf:
-            return ContinuousPdf(x=x, y=self._calculate_continuous_pdf(x))
+            return ProbabilityDensityFunction(x=x, y=self._calculate_continuous_pdf(x))
 
         result = np.zeros_like(x)
 
@@ -85,11 +83,11 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
             valid = indices >= 0
             result[valid] += scale * unique_continuous[indices[valid]]
 
-        return ContinuousPdf(x=x, y=result)
+        return ProbabilityDensityFunction(x=x, y=result)
 
     def _calculate_continuous_pdf(self, x: np.ndarray) -> np.ndarray:
         if len(self.continuous_pdfs) == 1:
-            return self.continuous_pdfs[0].calculate_continuous_pdf(x).y
+            return self.continuous_pdfs[0].calculate_pdf(x).y
 
         assert x.ndim == 1, "Input numpy array must be 1D"
         low = np.min(x)
@@ -98,7 +96,7 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
         start = low - spread
         end = high + spread
         x2 = np.linspace(start, end, len(x) * 3)
-        raw_pdfs = [pdf.calculate_continuous_pdf(x2).y for pdf in self.continuous_pdfs]
+        raw_pdfs = [pdf.calculate_pdf(x2).y for pdf in self.continuous_pdfs]
         combined_pdf = fftconvolve(raw_pdfs[0], raw_pdfs[1], mode="same")
         for pdf in raw_pdfs[2:]:
             combined_pdf = fftconvolve(combined_pdf, pdf, mode="same")
@@ -130,7 +128,7 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
             upper = mean + 3 * std_dev
 
         x_values = np.linspace(lower, upper, 10000)
-        pdf_vals = self.calculate_continuous_pdf(x_values).y
+        pdf_vals = self.calculate_pdf(x_values).y
 
         cdf_vals = cumulative_trapezoid(pdf_vals, x_values, initial=0)
         if cdf_vals[-1] < 1:
@@ -145,27 +143,27 @@ class MultiDistributionFunction(ContinuousDistributionFunction):
 
         return x_values, cdf_vals
 
-    def calculate_cdf(self, x: np.ndarray) -> np.ndarray:
+    def cdf(self, x: np.ndarray) -> np.ndarray:
         x_values, cumulative_probs = self._cdf
         return np.interp(x, x_values, cumulative_probs)
 
-    def calculate_inverse_cdf(self, x: np.ndarray) -> np.ndarray:
+    def ppf(self, x: np.ndarray) -> np.ndarray:
         x_values, cumulative_probs = self._cdf
         return np.interp(x, cumulative_probs, x_values)
 
-    def scale(self, x: float) -> "MultiDistributionFunction":
+    def scale(self, x: float) -> "MultiRV":
         x = float(x)
         continuous_pdfs = [pdf.scale(x) for pdf in self.continuous_pdfs]
         discrete_pdf = self.discrete_pdf.scale(x)
-        return MultiDistributionFunction(continuous_pdfs=continuous_pdfs, discrete_pdf=discrete_pdf)
+        return MultiRV(continuous_pdfs=continuous_pdfs, discrete_pdf=discrete_pdf)
 
-    def add_constant(self, x: float) -> "MultiDistributionFunction":
+    def add_constant(self, x: float) -> "MultiRV":
         x = float(x)
         discrete_pdf = self.discrete_pdf.add_constant(x)
-        return MultiDistributionFunction(continuous_pdfs=self.continuous_pdfs, discrete_pdf=discrete_pdf)
+        return MultiRV(continuous_pdfs=self.continuous_pdfs, discrete_pdf=discrete_pdf)
 
     def sample_numpy(self, n: int) -> np.ndarray:
         return sum([pdf.sample_numpy(n) for pdf in self.pdfs])  # type: ignore
 
-    def copy(self) -> "MultiDistributionFunction":
-        return MultiDistributionFunction(continuous_pdfs=self.continuous_pdfs, discrete_pdf=self.discrete_pdf)
+    def copy(self) -> "MultiRV":
+        return MultiRV(continuous_pdfs=self.continuous_pdfs, discrete_pdf=self.discrete_pdf)

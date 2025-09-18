@@ -3,23 +3,19 @@ from collections.abc import Sequence
 from scipy.stats import norm
 
 from randcraft.models import AlgebraicFunction
-from randcraft.pdfs.continuous import ContinuousDistributionFunction, ScaledDistributionFunction
-from randcraft.pdfs.discrete import DiracDeltaDistributionFunction, DiscreteDistributionFunction
-from randcraft.pdfs.multi import MultiDistributionFunction
-from randcraft.pdfs.scipy_pdf import ScipyDistributionFunction
+from randcraft.rvs.continuous import ContinuousRV, ScaledRV
+from randcraft.rvs.discrete import DiracDeltaRV, DiscreteRV
+from randcraft.rvs.multi import MultiRV
+from randcraft.rvs.scipy_pdf import SciRV
 
 
 class PdfConvolver:
     @classmethod
-    def convolve_pdfs(
-        cls, pdfs: Sequence[DiscreteDistributionFunction | ContinuousDistributionFunction]
-    ) -> DiscreteDistributionFunction | ContinuousDistributionFunction:
+    def convolve_pdfs(cls, pdfs: Sequence[DiscreteRV | ContinuousRV]) -> DiscreteRV | ContinuousRV:
         assert len(pdfs) >= 2, "At least two PDFs are required for combination."
-        if not all(isinstance(pdf, ContinuousDistributionFunction | DiscreteDistributionFunction) for pdf in pdfs):
+        if not all(isinstance(pdf, ContinuousRV | DiscreteRV) for pdf in pdfs):
             types = {pdf.__class__.__name__ for pdf in pdfs}
-            raise TypeError(
-                f"All PDFs must be instances of {ContinuousDistributionFunction | DiscreteDistributionFunction}, got: {types}"
-            )
+            raise TypeError(f"All PDFs must be instances of {ContinuousRV | DiscreteRV}, got: {types}")
 
         if all(rv.short_name == "normal" for rv in pdfs):
             return cls.convolve_normals(pdfs=pdfs)  # type: ignore
@@ -37,38 +33,34 @@ class PdfConvolver:
 
         discrete_pdf = discrete_pdfs[0] if len(discrete_pdfs) else None
         if discrete_pdf is not None:
-            if len(continuous_pdfs) == 1 and isinstance(discrete_pdf, DiracDeltaDistributionFunction):
+            if len(continuous_pdfs) == 1 and isinstance(discrete_pdf, DiracDeltaRV):
                 return continuous_pdfs[0].add_constant(discrete_pdf.value)
-            return MultiDistributionFunction(continuous_pdfs=continuous_pdfs, discrete_pdf=discrete_pdf)
+            return MultiRV(continuous_pdfs=continuous_pdfs, discrete_pdf=discrete_pdf)
 
         if len(continuous_pdfs) == 1:
             return continuous_pdfs[0]
-        return MultiDistributionFunction(continuous_pdfs=continuous_pdfs)
+        return MultiRV(continuous_pdfs=continuous_pdfs)
 
     @classmethod
-    def unpack_pdfs(
-        cls, pdfs: Sequence[DiscreteDistributionFunction | ContinuousDistributionFunction]
-    ) -> tuple[list[ContinuousDistributionFunction], list[DiscreteDistributionFunction]]:
-        continuous_pdfs: list[ContinuousDistributionFunction] = []
-        discrete_pdfs: list[DiscreteDistributionFunction] = []
+    def unpack_pdfs(cls, pdfs: Sequence[DiscreteRV | ContinuousRV]) -> tuple[list[ContinuousRV], list[DiscreteRV]]:
+        continuous_pdfs: list[ContinuousRV] = []
+        discrete_pdfs: list[DiscreteRV] = []
 
         for pdf in pdfs:
-            if isinstance(pdf, ScaledDistributionFunction):
+            if isinstance(pdf, ScaledRV):
                 af = pdf.algebraic_function
-                no_offset_continuous = ScaledDistributionFunction(
-                    inner=pdf.inner, algebraic_function=AlgebraicFunction(scale=af.scale, offset=0.0)
-                )
+                no_offset_continuous = ScaledRV(inner=pdf.inner, algebraic_function=AlgebraicFunction(scale=af.scale, offset=0.0))
                 continuous_pdfs.append(no_offset_continuous)
                 if af.offset != 0.0:
-                    offset_distribution = DiracDeltaDistributionFunction(value=af.offset)
+                    offset_distribution = DiracDeltaRV(value=af.offset)
                     discrete_pdfs.append(offset_distribution)
-            elif isinstance(pdf, MultiDistributionFunction):
+            elif isinstance(pdf, MultiRV):
                 inner_continuous, inner_discrete = cls.unpack_pdfs(pdf.pdfs)
                 continuous_pdfs.extend(inner_continuous)
                 discrete_pdfs.extend(inner_discrete)
-            elif isinstance(pdf, ContinuousDistributionFunction):
+            elif isinstance(pdf, ContinuousRV):
                 continuous_pdfs.append(pdf)
-            elif isinstance(pdf, DiscreteDistributionFunction):
+            elif isinstance(pdf, DiscreteRV):
                 discrete_pdfs.append(pdf)
             else:
                 raise TypeError(f"Unsupported PDF type: {type(pdf)}")
@@ -76,16 +68,16 @@ class PdfConvolver:
         return continuous_pdfs, discrete_pdfs
 
     @classmethod
-    def convolve_discretes(cls, pdfs: list[DiscreteDistributionFunction]) -> DiscreteDistributionFunction:
-        assert all(isinstance(pdf, DiscreteDistributionFunction) for pdf in pdfs)
+    def convolve_discretes(cls, pdfs: list[DiscreteRV]) -> DiscreteRV:
+        assert all(isinstance(pdf, DiscreteRV) for pdf in pdfs)
 
-        def to_dict(x: DiscreteDistributionFunction) -> dict[float, float]:
+        def to_dict(x: DiscreteRV) -> dict[float, float]:
             return {k: v for k, v in zip(x.values, x.probabilities)}
 
-        def from_dict(x: dict[float, float]) -> DiscreteDistributionFunction:
+        def from_dict(x: dict[float, float]) -> DiscreteRV:
             values = list(x.keys())
             probabilities = list(x.values())
-            return DiscreteDistributionFunction(values=values, probabilities=probabilities)
+            return DiscreteRV(values=values, probabilities=probabilities)
 
         def convolve_two(x: dict[float, float], y: dict[float, float]) -> dict[float, float]:
             output_dict: dict[float, float] = {}
@@ -110,19 +102,19 @@ class PdfConvolver:
         result_dict = convolve_iteratively(dict_list)
         result_pdf = from_dict(result_dict)
         if len(result_pdf.values) == 1:
-            return DiracDeltaDistributionFunction(value=result_pdf.values[0])
+            return DiracDeltaRV(value=result_pdf.values[0])
         return result_pdf
 
     @classmethod
-    def convolve_normals(cls, pdfs: list[ScipyDistributionFunction]) -> ScipyDistributionFunction:
+    def convolve_normals(cls, pdfs: list[SciRV]) -> SciRV:
         # Equivalent to adding independent normal random variables
         if not pdfs:
             raise ValueError("No PDFs provided for combination.")
 
         for pdf in pdfs:
-            assert isinstance(pdf, ScipyDistributionFunction)
+            assert isinstance(pdf, SciRV)
             assert pdf.short_name == "normal", f"Expected normal distribution, got {pdf.short_name}"
 
         new_mean = sum([pdf.mean for pdf in pdfs])
         new_variance = sum([pdf.variance for pdf in pdfs])
-        return ScipyDistributionFunction(norm, loc=new_mean, scale=new_variance**0.5)
+        return SciRV(norm, loc=new_mean, scale=new_variance**0.5)
