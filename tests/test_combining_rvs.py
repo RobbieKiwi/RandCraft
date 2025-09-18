@@ -98,7 +98,7 @@ class TestCombiningRvs(BaseTestCase):
 
         rv3 = make_anon(sampler=lambda n: np.ones(n) * 15.0)
 
-        rv3_double = rv3.scale(3)
+        rv3_double = rv3.scale(2)
         self.assertIsInstance(rv3_double, RandomVariable)
         self.assertAlmostEqual(rv3_double.get_mean(), 30.0)
         self.assertAlmostEqual(rv3_double.get_variance(), 0.0)
