@@ -17,13 +17,13 @@ class TestCombiningRvs(BaseTestCase):
 
         rv = make_beta(a=a, b=b)
 
-        scaled_rv = rv * 1
+        scaled_rv = rv.scale(factor=1)
         self.assert_stats_are_close(a=scaled_rv.statistics, b=rv.statistics)
 
         offset_rv = scaled_rv - 1
         self.assertAlmostEqual(offset_rv.get_mean(), rv.get_mean() - 1)
 
-        negative_rv = rv * -1
+        negative_rv = rv.scale(factor=-1)
         new_rv = negative_rv - 2
         self.assertAlmostEqual(new_rv.get_mean(), rv.get_mean() * -1 - 2)
         self.assertAlmostEqual(new_rv.get_variance(), rv.get_variance())
@@ -85,27 +85,26 @@ class TestCombiningRvs(BaseTestCase):
         self.assertAlmostEqual(rv_sub.get_mean(), 5 - 3)
         self.assertAlmostEqual(rv_sub.get_variance(), rv1.get_variance() + rv2.get_variance())
 
-        # Test multiplication
-        rv_neg = rv1 * -1
+        # Test scaling
+        rv_neg = rv1.scale(-1)
         self.assertIsInstance(rv_neg, RandomVariable)
         self.assertAlmostEqual(rv_neg.get_mean(), -5)
         self.assertAlmostEqual(rv_neg.get_variance(), rv1.get_variance())
 
-        # Test division
-        rv_div = rv1 / 2
+        rv_div = rv1.scale(1 / 2)
         self.assertIsInstance(rv_div, RandomVariable)
         self.assertAlmostEqual(rv_div.get_mean(), 5 / 2)
         self.assertAlmostEqual(rv_div.get_variance(), rv1.get_variance() / 4)
 
         rv3 = make_anon(sampler=lambda n: np.ones(n) * 15.0)
 
-        rv3_double = rv3 * 2
+        rv3_double = rv3.scale(3)
         self.assertIsInstance(rv3_double, RandomVariable)
         self.assertAlmostEqual(rv3_double.get_mean(), 30.0)
         self.assertAlmostEqual(rv3_double.get_variance(), 0.0)
 
         # Test scale by zero
-        rv_zero_scale = rv1 * 0
+        rv_zero_scale = rv1.scale(0)
         self.assertIsInstance(rv_zero_scale, RandomVariable)
         self.assertAlmostEqual(rv_zero_scale.get_mean(), 0.0)
         self.assertAlmostEqual(rv_zero_scale.get_variance(), 0.0)
@@ -123,12 +122,12 @@ class TestCombiningRvs(BaseTestCase):
     def test_uniform_multiplications(self) -> None:
         rv1 = make_uniform(low=0, high=10)
 
-        double_rv1 = rv1 * 2
+        double_rv1 = rv1.scale(2)
         self.assertIsInstance(double_rv1, RandomVariable)
         self.assertAlmostEqual(double_rv1.get_mean(exact=True), 10)
         self.assertAlmostEqual(double_rv1.get_variance(exact=True), rv1.get_variance() * 4)
 
-        negative_rv1 = rv1 * -1
+        negative_rv1 = rv1.scale(-1)
         self.assertIsInstance(negative_rv1, RandomVariable)
         self.assertAlmostEqual(negative_rv1.get_mean(exact=True), -5)
         self.assertAlmostEqual(negative_rv1.get_variance(exact=True), rv1.get_variance())
@@ -141,7 +140,7 @@ class TestCombiningRvs(BaseTestCase):
         self.assertAlmostEqual(two_dice.get_mean(exact=True), 7.0)
 
         one = make_dirac(value=1)
-        two_dice_and_one = dice * 2 + one
+        two_dice_and_one = two_dice + one
         self.assertIsInstance(two_dice_and_one, RandomVariable)
         self.assertIsInstance(two_dice_and_one._rv, DiscreteRV)
         self.assertAlmostEqual(two_dice_and_one.get_mean(exact=True), 8.0)

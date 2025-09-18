@@ -30,5 +30,5 @@ class TestPlotting(TestCase):
         rv = make_beta(a=a, b=b)
         rv._rv.plot()
 
-        new_rv = rv * -1 - 2
+        new_rv = rv.scale(-1) - 2
         new_rv._rv.plot()

@@ -68,6 +68,7 @@ class RandomVariable:
 
     def __add__(self, other: Union["RandomVariable", float]) -> "RandomVariable":
         # Assumes pdfs are not correlated
+        # TODO How to deal with mixtures here?
         if not isinstance(other, RandomVariable):
             rv = DiracDeltaRV(value=float(other))
         else:
@@ -80,19 +81,23 @@ class RandomVariable:
 
     def __sub__(self, other: Union["RandomVariable", float]) -> "RandomVariable":
         # Assumes pdfs are not correlated
-        if not isinstance(other, RandomVariable):
-            other = float(other)
-        return self + (other * -1)
+        if isinstance(other, RandomVariable):
+            return self + other.scale(-1)
+        else:
+            return self + (float(other) * -1)
 
-    def __mul__(self, factor: float) -> "RandomVariable":
+    def scale(self, factor: float) -> "RandomVariable":
         if factor == 0.0:
             return RandomVariable(DiracDeltaRV(value=0.0))
         factor = float(factor)
         new_pdf = self._rv.scale(x=factor)
         return RandomVariable(rv=new_pdf)
 
-    def __rmul__(self, factor: float) -> "RandomVariable":
-        return self.__mul__(factor)
-
-    def __truediv__(self, factor: float) -> "RandomVariable":
-        return self.__mul__(1.0 / factor)
+    def multi_sample(self, n: int) -> "RandomVariable":
+        # TODO How to deal with mixtures here?
+        if n <= 0:
+            raise ValueError("n must be a positive integer.")
+        if n == 1:
+            return self
+        new_rv = PdfConvolver.convolve_pdfs(pdfs=[self._rv] * n)  # type: ignore
+        return RandomVariable(rv=new_rv)
