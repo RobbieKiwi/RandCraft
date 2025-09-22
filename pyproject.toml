@@ -17,6 +17,7 @@ dev = [
     "black>=25.1.0",
     "isort>=6.0.1",
     "pytest>=8.4.2",
+    "python-semantic-release>=10.4.1",
     "ruff>=0.13.0",
 ]
 
