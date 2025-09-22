@@ -1,16 +1,13 @@
-from collections.abc import Callable
-
 import numpy as np
 from scipy.stats import beta, gamma, norm, uniform
 from scipy.stats._distn_infrastructure import rv_continuous
 
-from randcraft.pdfs import (
-    AnonymousDistributionFunction,
-    DiracDeltaDistributionFunction,
-    DiscreteDistributionFunction,
-    ScipyDistributionFunction,
-)
 from randcraft.random_variable import RandomVariable
+from randcraft.rvs import (
+    DiracDeltaRV,
+    DiscreteRV,
+    SciRV,
+)
 from randcraft.utils import clean_1d_array
 
 __all__ = [
@@ -18,7 +15,6 @@ __all__ = [
     "make_dirac",
     "make_coin_flip",
     "make_die_roll",
-    "make_anon",
     "make_scipy",
     "make_normal",
     "make_uniform",
@@ -28,19 +24,17 @@ __all__ = [
 
 
 # Discrete
-def make_discrete(
-    values: list[float] | list[int] | np.ndarray, probabilities: list[float] | np.ndarray | None = None
-) -> RandomVariable:
+def make_discrete(values: list[float] | list[int] | np.ndarray, probabilities: list[float] | np.ndarray | None = None) -> RandomVariable:
     # If probabilities are not provided, equal probabilities are assumed
     values = clean_1d_array(values)
     if probabilities is not None:
         probabilities = clean_1d_array(probabilities)
-    return RandomVariable(pdf=DiscreteDistributionFunction(values=values, probabilities=probabilities))
+    return RandomVariable(rv=DiscreteRV(values=values, probabilities=probabilities))
 
 
 def make_dirac(value: float | int) -> RandomVariable:
     value = float(value)
-    return RandomVariable(pdf=DiracDeltaDistributionFunction(value=value))
+    return RandomVariable(rv=DiracDeltaRV(value=value))
 
 
 def make_coin_flip() -> RandomVariable:
@@ -53,14 +47,9 @@ def make_die_roll(sides: int = 6) -> RandomVariable:
     return make_discrete(values=values, probabilities=probabilities)
 
 
-# Misc
-def make_anon(sampler: Callable[[int], np.ndarray]) -> RandomVariable:
-    return RandomVariable(pdf=AnonymousDistributionFunction(sampler=sampler))
-
-
 # Scipy
 def make_scipy(scipy_rv: rv_continuous, *args: float | int, **kwargs: float | int) -> RandomVariable:
-    return RandomVariable(pdf=ScipyDistributionFunction(scipy_rv, *args, **kwargs))
+    return RandomVariable(rv=SciRV(scipy_rv, *args, **kwargs))
 
 
 # Helpers for common scipy distributions

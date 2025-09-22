@@ -1,14 +1,14 @@
-from typing import TypeVar, Union
+from typing import TypeVar, Union, overload
 
 import numpy as np
 
 from randcraft.models import Statistics
 from randcraft.pdf_convolver import PdfConvolver
-from randcraft.pdfs import (
-    AnonymousDistributionFunction,
-    DiracDeltaDistributionFunction,
-    ProbabilityDistributionFunction,
+from randcraft.rvs import (
+    RV,
+    DiracDeltaRV,
 )
+from randcraft.rvs.base import PdfPlotType
 
 __all__ = ["RandomVariable"]
 
@@ -16,86 +16,97 @@ T = TypeVar("T")
 
 
 class RandomVariable:
-    def __init__(self, pdf: ProbabilityDistributionFunction) -> None:
-        self._pdf = pdf
+    # A wrapper around the different random variable implementations (RV)
+    def __init__(self, rv: RV) -> None:
+        self._rv = rv
 
     def __str__(self) -> str:
         mean = float(np.format_float_positional(x=self.statistics.mean.value, precision=3, fractional=False))
         var = float(np.format_float_positional(x=self.statistics.variance.value, precision=3, fractional=False))
-        name = self.pdf.short_name
+        name = self._rv.short_name
         return f"<{self.__class__.__name__}({name}): {mean=}, {var=}>"
 
     def __repr__(self) -> str:
         return str(self)
 
-    @property
-    def pdf(self) -> ProbabilityDistributionFunction:
-        return self._pdf
-
-    @property
-    def statistics(self) -> Statistics:
-        return self.pdf.statistics
-
-    def get_mean(self, exact: bool = False) -> float:
-        return self.pdf.statistics.get(name="mean", certain=exact)
-
-    def get_variance(self, exact: bool = False) -> float:
-        return self.pdf.statistics.get(name="variance", certain=exact)
-
-    def get_min_value(self, exact: bool = False) -> float:
-        return self.pdf.statistics.get(name="min_value", certain=exact)
-
-    def get_max_value(self, exact: bool = False) -> float:
-        return self.pdf.statistics.get(name="max_value", certain=exact)
-
-    def get_chance_that_rv_is_le(self, value: float, exact: bool = False) -> float:
-        if exact and isinstance(self.pdf, AnonymousDistributionFunction):
-            # TODO Move this certainty logic inside the pdf subclasses
-            name = AnonymousDistributionFunction.short_name
-            raise ValueError(f"Exact CDF calculation is not supported for {name} distributions.")
-        return self.pdf.chance_that_rv_is_le(value=value)
-
-    def get_value_that_is_at_le_chance(self, chance: float, exact: bool = False) -> float:
-        if exact and isinstance(self.pdf, AnonymousDistributionFunction):
-            # TODO Move this certainty logic inside the pdf subclasses
-            name = AnonymousDistributionFunction.short_name
-            raise ValueError(f"Exact quantile calculation is not supported for {name} distributions.")
-        assert 0.0 <= chance <= 1.0, "Chance must be between 0 and 1."
-        return self.pdf.value_that_is_at_le_chance(chance=chance)
-
-    def sample_numpy(self, n: int) -> np.ndarray:
-        return self.pdf.sample_numpy(n=n)
-
-    def sample_one(self) -> float:
-        return self.sample_numpy(1).tolist()[0]
-
     def __add__(self, other: Union["RandomVariable", float]) -> "RandomVariable":
         # Assumes pdfs are not correlated
         if not isinstance(other, RandomVariable):
-            pdf = DiracDeltaDistributionFunction(value=float(other))
+            rv = DiracDeltaRV(value=float(other))
         else:
-            pdf = other.pdf
-        new_pdf = PdfConvolver.convolve_pdfs(pdfs=[self.pdf, pdf])  # type: ignore
-        return RandomVariable(pdf=new_pdf)
+            rv = other._rv
+        new_rv = PdfConvolver.convolve_pdfs(pdfs=[self._rv, rv])  # type: ignore
+        return RandomVariable(rv=new_rv)
 
     def __radd__(self, other: Union["RandomVariable", float]) -> "RandomVariable":
         return self.__add__(other)
 
     def __sub__(self, other: Union["RandomVariable", float]) -> "RandomVariable":
         # Assumes pdfs are not correlated
-        if not isinstance(other, RandomVariable):
-            other = float(other)
-        return self + (other * -1)
+        if isinstance(other, RandomVariable):
+            return self + other.scale(-1)
+        else:
+            return self + (float(other) * -1)
 
-    def __mul__(self, factor: float) -> "RandomVariable":
+    @property
+    def statistics(self) -> Statistics:
+        return self._rv.statistics
+
+    def get_mean(self, exact: bool = False) -> float:
+        return self._rv.statistics.get(name="mean", certain=exact)
+
+    def get_variance(self, exact: bool = False) -> float:
+        return self._rv.statistics.get(name="variance", certain=exact)
+
+    def get_min_value(self, exact: bool = False) -> float:
+        return self._rv.statistics.get(name="min_value", certain=exact)
+
+    def get_max_value(self, exact: bool = False) -> float:
+        return self._rv.statistics.get(name="max_value", certain=exact)
+
+    @overload
+    def cdf(self, value: float | int, exact: bool = False) -> float: ...
+
+    @overload
+    def cdf(self, value: np.ndarray, exact: bool = False) -> np.ndarray: ...
+
+    def cdf(self, value: np.ndarray | float | int, exact: bool = False) -> float | np.ndarray:
+        if isinstance(value, np.ndarray):
+            return self._rv.cdf(x=value).get(name="cdf", certain=exact)
+        return self.cdf(value=np.array([float(value)]))[0]
+
+    @overload
+    def ppf(self, value: float | int, exact: bool = False) -> float: ...
+
+    @overload
+    def ppf(self, value: np.ndarray, exact: bool = False) -> np.ndarray: ...
+
+    def ppf(self, value: np.ndarray | float | int, exact: bool = False) -> float | np.ndarray:
+        if isinstance(value, np.ndarray):
+            return self._rv.ppf(q=value).get(name="ppf", certain=exact)
+        return self.ppf(value=np.array([value]))[0]
+
+    def sample_numpy(self, n: int) -> np.ndarray:
+        return self._rv.sample_numpy(n=n)
+
+    def sample_one(self) -> float:
+        return self.sample_numpy(1).tolist()[0]
+
+    def scale(self, factor: float) -> "RandomVariable":
         if factor == 0.0:
-            return RandomVariable(DiracDeltaDistributionFunction(value=0.0))
+            return RandomVariable(DiracDeltaRV(value=0.0))
         factor = float(factor)
-        new_pdf = self.pdf.scale(x=factor)
-        return RandomVariable(pdf=new_pdf)
+        new_pdf = self._rv.scale(x=factor)
+        return RandomVariable(rv=new_pdf)
 
-    def __rmul__(self, factor: float) -> "RandomVariable":
-        return self.__mul__(factor)
+    def multi_sample(self, n: int) -> "RandomVariable":
+        # Return an RV that is the sum of n independent samples of this RV
+        if n <= 0:
+            raise ValueError("n must be a positive integer.")
+        if n == 1:
+            return self
+        new_rv = PdfConvolver.convolve_pdfs(pdfs=[self._rv] * n)  # type: ignore
+        return RandomVariable(rv=new_rv)
 
-    def __truediv__(self, factor: float) -> "RandomVariable":
-        return self.__mul__(1.0 / factor)
+    def plot(self, kind: PdfPlotType = "both") -> None:
+        self._rv.plot(kind=kind)

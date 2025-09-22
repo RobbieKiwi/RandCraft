@@ -3,7 +3,6 @@ randcraft
 """
 
 from randcraft.constructors import (
-    make_anon,
     make_coin_flip,
     make_die_roll,
     make_dirac,
@@ -20,6 +19,5 @@ __all__ = [
     "make_dirac",
     "make_coin_flip",
     "make_die_roll",
-    "make_anon",
     "make_gamma",
 ]

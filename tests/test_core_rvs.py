@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from randcraft import make_anon, make_dirac, make_discrete, make_gamma, make_normal, make_uniform
+from randcraft import make_dirac, make_discrete, make_gamma, make_normal, make_uniform
 from randcraft.constructors import make_beta
 
 
@@ -18,9 +18,9 @@ class TestCoreRvs(TestCase):
 
         self.assertEqual(rv.get_mean(exact=True), mean)
         self.assertAlmostEqual(rv.get_variance(exact=True), std_dev**2)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=mean - std_dev, exact=True), 0.15865525393145707)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=mean, exact=True), 0.5)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=mean + std_dev, exact=True), 0.8413447460685429)
+        self.assertAlmostEqual(rv.cdf(value=mean - std_dev, exact=True), 0.15865525393145707)
+        self.assertAlmostEqual(rv.cdf(value=mean, exact=True), 0.5)
+        self.assertAlmostEqual(rv.cdf(value=mean + std_dev, exact=True), 0.8413447460685429)
 
     def test_uniform_rv(self) -> None:
         low = 10.0
@@ -39,9 +39,9 @@ class TestCoreRvs(TestCase):
 
         self.assertEqual(rv.get_mean(exact=True), (low + high) / 2)
         self.assertAlmostEqual(rv.get_variance(exact=True), ((high - low) ** 2) / 12)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=low, exact=True), 0.0)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=15.0, exact=True), 0.5)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=high, exact=True), 1.0)
+        self.assertAlmostEqual(rv.cdf(value=low, exact=True), 0.0)
+        self.assertAlmostEqual(rv.cdf(value=15.0, exact=True), 0.5)
+        self.assertAlmostEqual(rv.cdf(value=high, exact=True), 1.0)
 
     def test_beta_rv(self) -> None:
         a = 2.0
@@ -62,9 +62,9 @@ class TestCoreRvs(TestCase):
 
         self.assertAlmostEqual(rv.get_mean(exact=True), a / (a + b))
         self.assertAlmostEqual(rv.get_variance(exact=True), (a * b) / ((a + b) ** 2 * (a + b + 1)))
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=0.0, exact=True), 0.0)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=0.5, exact=True), 0.890625)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=1.0, exact=True), 1.0)
+        self.assertAlmostEqual(rv.cdf(value=0.0, exact=True), 0.0)
+        self.assertAlmostEqual(rv.cdf(value=0.5, exact=True), 0.890625)
+        self.assertAlmostEqual(rv.cdf(value=1.0, exact=True), 1.0)
 
     def test_gamma_rv(self) -> None:
         shape = 2.0
@@ -83,8 +83,8 @@ class TestCoreRvs(TestCase):
 
         self.assertAlmostEqual(rv.get_mean(exact=True), shape * scale)
         self.assertAlmostEqual(rv.get_variance(exact=True), shape * scale**2)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=0.0, exact=True), 0.0)
-        self.assertAlmostEqual(rv.get_chance_that_rv_is_le(value=shape * scale, exact=True), 0.5939941502901615)
+        self.assertAlmostEqual(rv.cdf(value=0.0, exact=True), 0.0)
+        self.assertAlmostEqual(rv.cdf(value=shape * scale, exact=True), 0.5939941502901615)
 
     def test_dirac_delta_rv(self) -> None:
         value = 42.0
@@ -96,9 +96,9 @@ class TestCoreRvs(TestCase):
 
         self.assertEqual(rv.get_mean(exact=True), value)
         self.assertAlmostEqual(rv.get_variance(exact=True), 0.0)
-        self.assertEqual(rv.get_chance_that_rv_is_le(value=value - 1e-9, exact=True), 0.0)
-        self.assertEqual(rv.get_chance_that_rv_is_le(value=value, exact=True), 1.0)
-        self.assertEqual(rv.get_chance_that_rv_is_le(value=value + 1e-9, exact=True), 1.0)
+        self.assertEqual(rv.cdf(value=value - 1e-9, exact=True), 0.0)
+        self.assertEqual(rv.cdf(value=value, exact=True), 1.0)
+        self.assertEqual(rv.cdf(value=value + 1e-9, exact=True), 1.0)
 
     def test_discrete_rv(self) -> None:
         values = [1, 2, 3]
@@ -116,20 +116,3 @@ class TestCoreRvs(TestCase):
             rv.get_variance(exact=True),
             sum(p * (v - rv.get_mean(exact=True)) ** 2 for v, p in zip(values, probabilities)),
         )
-
-    def test_anonymous_rv(self) -> None:
-        mean = 23.4
-
-        rv = make_anon(sampler=lambda n: np.ones(n) * mean)
-
-        sample = rv.sample_one()
-        self.assertEqual(sample, mean)
-
-        self.assertAlmostEqual(rv.get_mean(), mean)
-        self.assertAlmostEqual(rv.get_variance(), 0.0)
-        self.assertEqual(rv.get_chance_that_rv_is_le(value=mean - 1e-9), 0.0)
-        self.assertEqual(rv.get_chance_that_rv_is_le(value=mean), 1.0)
-        self.assertEqual(rv.get_chance_that_rv_is_le(value=mean + 1e-9), 1.0)
-
-        self.assertRaises(NotImplementedError, lambda: rv.get_mean(exact=True))
-        self.assertRaises(NotImplementedError, lambda: rv.get_variance(exact=True))

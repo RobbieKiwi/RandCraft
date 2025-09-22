@@ -4,13 +4,14 @@ from typing import Literal, Self, TypeVar
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
+from scipy.integrate import cumulative_trapezoid
 
-from randcraft.models import ContinuousPdf, DiscretePdf, Statistics
+from randcraft.models import ProbabilityDensityFunction, ProbabilityMassFunction, Statistics, Uncertainty, maybe
 
 type PdfPlotType = Literal["pdf", "cdf", "both"]
 
 
-class ProbabilityDistributionFunction(ABC):
+class RV(ABC):
     @property
     @abstractmethod
     def short_name(self) -> str: ...
@@ -23,28 +24,22 @@ class ProbabilityDistributionFunction(ABC):
     def sample_numpy(self, n: int) -> np.ndarray: ...
 
     @abstractmethod
-    def chance_that_rv_is_le(self, value: float) -> float: ...
+    def scale(self, x: float) -> "RV": ...
 
     @abstractmethod
-    def value_that_is_at_le_chance(self, chance: float) -> float: ...
+    def add_constant(self, x: float) -> "RV": ...
 
     @abstractmethod
-    def scale(self, x: float) -> "ProbabilityDistributionFunction": ...
+    def calculate_pdf(self, x: np.ndarray) -> ProbabilityDensityFunction | None: ...
 
     @abstractmethod
-    def add_constant(self, x: float) -> "ProbabilityDistributionFunction": ...
+    def calculate_pmf(self) -> ProbabilityMassFunction | None: ...
 
     @abstractmethod
-    def calculate_continuous_pdf(self, x: np.ndarray) -> ContinuousPdf | None: ...
+    def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]: ...
 
     @abstractmethod
-    def calculate_discrete_pdf(self) -> DiscretePdf | None: ...
-
-    @abstractmethod
-    def calculate_cdf(self, x: np.ndarray) -> np.ndarray: ...
-
-    @abstractmethod
-    def _get_plot_range(self) -> tuple[float, float]: ...
+    def ppf(self, q: np.ndarray) -> Uncertainty[np.ndarray]: ...
 
     @abstractmethod
     def _get_discrete_points(self) -> np.ndarray: ...
@@ -131,12 +126,26 @@ class ProbabilityDistributionFunction(ABC):
         fig.set_size_inches(10, 6)
         plt.show()
 
+    def _get_plot_range(self) -> tuple[float, float]:
+        if not np.isinf(self.min_value):
+            start = self.min_value - 0.1 * self.std_dev
+        else:
+            start = self.mean - 4 * self.std_dev
+        if not np.isinf(self.max_value):
+            end = self.max_value + 0.1 * self.std_dev
+        else:
+            end = self.mean + 4 * self.std_dev
+        buffer = (end - start) * 0.01
+        if buffer == 0.0:
+            buffer = max(1.0, abs(self.mean))
+        return start - buffer, end + buffer
+
     def plot_pdf_on_axis(self, ax: Axes, x: np.ndarray) -> None:
-        cont_pdf = self.calculate_continuous_pdf(x)
+        cont_pdf = self.calculate_pdf(x)
         if cont_pdf is not None:
             ax.plot(cont_pdf.x, cont_pdf.y)
 
-        disc_pdf = self.calculate_discrete_pdf()
+        disc_pdf = self.calculate_pmf()
         if disc_pdf is not None:
             for x, p in zip(disc_pdf.x, disc_pdf.y):
                 ax.vlines(x, 0, p, colors="C0", linewidth=2)
@@ -144,8 +153,62 @@ class ProbabilityDistributionFunction(ABC):
         return
 
     def plot_cdf_on_axis(self, ax: Axes, x: np.ndarray) -> None:
-        y = self.calculate_cdf(x)
+        y = self.cdf(x).value
         ax.plot(x, y)
 
 
-T_Pdf = TypeVar("T_Pdf", bound=ProbabilityDistributionFunction)
+T_RV = TypeVar("T_RV", bound=RV)
+
+
+class CdfEstimator:
+    def __init__(self, rv: RV) -> None:
+        self.rv = rv
+        self.x, self.p = self.calculate_cdf(rv)
+
+    def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        return maybe(np.interp(x, self.x, self.p))
+
+    def ppf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        return maybe(np.interp(x, self.p, self.x))
+
+    @staticmethod
+    def calculate_cdf(rv: RV) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Returns two numpy arrays (x_values, cumulative_probabilities) representing the CDF.
+        The chance that x < value can be found by interpolating cumulative_probabilities at value.
+        """
+        mean = rv.statistics.mean.value
+        std_dev = rv.statistics.std_dev.value
+        has_finite_lower_support = not np.isinf(rv.statistics.min_value.value)
+        has_finite_upper_support = not np.isinf(rv.statistics.max_value.value)
+
+        if has_finite_lower_support and has_finite_upper_support:
+            lower = rv.statistics.min_value.value
+            upper = rv.statistics.max_value.value
+        elif has_finite_lower_support:
+            lower = rv.statistics.min_value.value
+            upper = lower + 6 * std_dev
+        elif has_finite_upper_support:
+            upper = rv.statistics.max_value.value
+            lower = upper - 6 * std_dev
+        else:
+            lower = mean - 3 * std_dev
+            upper = mean + 3 * std_dev
+
+        x_values = np.linspace(lower, upper, 10000)
+        pdf = rv.calculate_pdf(x_values)
+        assert pdf is not None, "PDF must be defined to calculate CDF"
+        pdf_vals = pdf.y
+
+        cdf_vals = cumulative_trapezoid(pdf_vals, x_values, initial=0)
+        if cdf_vals[-1] < 1:
+            remainder = 1 - cdf_vals[-1]
+            cdf_vals = cdf_vals + remainder / 2
+            x_values = np.concatenate(([-np.inf], x_values, [np.inf]))
+            cdf_vals = np.concatenate(([0.0], cdf_vals, [1.0]))
+        else:
+            cdf_vals /= cdf_vals[-1]  # Normalize
+            cdf_vals[0] = 0.0
+            cdf_vals[-1] = 1.0
+
+        return x_values, cdf_vals

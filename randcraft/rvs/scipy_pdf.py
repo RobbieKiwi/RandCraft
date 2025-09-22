@@ -3,15 +3,15 @@ from functools import cached_property
 import numpy as np
 from scipy.stats._distn_infrastructure import rv_continuous, rv_continuous_frozen
 
-from randcraft.models import AlgebraicFunction, ContinuousPdf, Statistics, certainly
-from randcraft.pdfs.continuous import ContinuousDistributionFunction, ScaledDistributionFunction
+from randcraft.models import AlgebraicFunction, ProbabilityDensityFunction, Statistics, Uncertainty, certainly
+from randcraft.rvs.continuous import ContinuousRV, ScaledRV
 
 
 class RescalingError(Exception):
     pass
 
 
-class ScipyDistributionFunction(ContinuousDistributionFunction):
+class SciRV(ContinuousRV):
     def __init__(self, scipy_rv_type: rv_continuous, *args, **kwargs) -> None:
         # It really should be continuous, but the typing here helps to interface with strange scipy typing
         scipy_rv = scipy_rv_type(*args, **kwargs)
@@ -42,24 +42,22 @@ class ScipyDistributionFunction(ContinuousDistributionFunction):
             support=(certainly(lower), certainly(upper)),
         )
 
-    def scale(self, x: float) -> "ScipyDistributionFunction | ScaledDistributionFunction":
+    def scale(self, x: float) -> "SciRV | ScaledRV":
         return self._safe_rescale(AlgebraicFunction(scale=float(x), offset=0.0))
 
-    def add_constant(self, x: float) -> "ScipyDistributionFunction | ScaledDistributionFunction":
+    def add_constant(self, x: float) -> "SciRV | ScaledRV":
         return self._safe_rescale(AlgebraicFunction(scale=1.0, offset=float(x)))
 
-    def _safe_rescale(self, af: AlgebraicFunction) -> "ScipyDistributionFunction | ScaledDistributionFunction":
-        def scale_with_scale_distribution() -> ScaledDistributionFunction:
-            return ScaledDistributionFunction(inner=self, algebraic_function=af)
+    def _safe_rescale(self, af: AlgebraicFunction) -> "SciRV | ScaledRV":
+        def scale_with_scale_distribution() -> ScaledRV:
+            return ScaledRV(inner=self, algebraic_function=af)
 
-        has_finite_support_on_one_side = not (
-            self.statistics.has_infinite_lower_support and self.statistics.has_infinite_upper_support
-        )
+        has_finite_support_on_one_side = not (self.statistics.has_infinite_lower_support and self.statistics.has_infinite_upper_support)
 
         if has_finite_support_on_one_side and af.scale < 0:
             return scale_with_scale_distribution()
 
-        def scale_with_scipy() -> ScipyDistributionFunction:
+        def scale_with_scipy() -> SciRV:
             shape_args = self._scipy_rv.args
             shape_kwargs = {k: v for k, v in self._scipy_rv.kwds.items()}
             shape_kwargs["loc"] = 0.0
@@ -71,7 +69,7 @@ class ScipyDistributionFunction(ContinuousDistributionFunction):
             new_scale = current_scale * af.scale
             shape_kwargs["loc"] = new_loc
             shape_kwargs["scale"] = new_scale
-            return ScipyDistributionFunction(self._scipy_rv_type, *shape_args, **shape_kwargs)
+            return SciRV(self._scipy_rv_type, *shape_args, **shape_kwargs)
 
         for f in [scale_with_scipy, scale_with_scale_distribution]:
             result = f()
@@ -92,14 +90,14 @@ class ScipyDistributionFunction(ContinuousDistributionFunction):
     def sample_numpy(self, n: int) -> np.ndarray:
         return self.scipy_rv.rvs(size=n)
 
-    def calculate_continuous_pdf(self, x: np.ndarray) -> ContinuousPdf:
-        return ContinuousPdf(x=x, y=self.scipy_rv.pdf(x))
+    def calculate_pdf(self, x: np.ndarray) -> ProbabilityDensityFunction:
+        return ProbabilityDensityFunction(x=x, y=self.scipy_rv.pdf(x))
 
-    def calculate_cdf(self, x: np.ndarray) -> np.ndarray:
-        return self.scipy_rv.cdf(x)
+    def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        return certainly(self.scipy_rv.cdf(x))
 
-    def calculate_inverse_cdf(self, x: np.ndarray) -> np.ndarray:
-        return self.scipy_rv.ppf(x)
+    def ppf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        return certainly(self.scipy_rv.ppf(x))
 
-    def copy(self) -> "ScipyDistributionFunction":
+    def copy(self) -> "SciRV":
         return self.scale(1.0)  # type: ignore

@@ -6,6 +6,15 @@ from typing import Literal, Protocol, TypeVar, runtime_checkable
 import numpy as np
 
 T = TypeVar("T")
+U = TypeVar("U")
+
+
+class SupportsFloatMul(Protocol):
+    def __mul__(self: T, x: float, /) -> T: ...
+    def __rmul__(self: T, x: float, /) -> T: ...
+
+
+T_SFM = TypeVar("T_SFM", bound=SupportsFloatMul)
 
 
 @dataclass(frozen=True)
@@ -24,13 +33,13 @@ class Uncertainty[T]:
     def __repr__(self) -> str:
         return str(self)
 
-    def __mul__(self, other: "Uncertainty[T]" | T) -> "Uncertainty[T]":
+    def __mul__(self, other: "Uncertainty[T]" | T | float | int) -> "Uncertainty[T]":
         return self._combine(other=other, func=lambda x, y: x * y)  # type: ignore
 
-    def __add__(self, other: "Uncertainty[T]" | T) -> "Uncertainty[T]":
+    def __add__(self, other: "Uncertainty[T]" | T | float | int) -> "Uncertainty[T]":
         return self._combine(other=other, func=lambda x, y: x + y)  # type: ignore
 
-    def __sub__(self, other: "Uncertainty[T]" | T) -> "Uncertainty[T]":
+    def __sub__(self, other: "Uncertainty[T]" | T | float | int) -> "Uncertainty[T]":
         return self._combine(other=other, func=lambda x, y: x - y)  # type: ignore
 
     def __pow__(self, other: int | float) -> "Uncertainty[T]":
@@ -44,6 +53,9 @@ class Uncertainty[T]:
         if certain and not self.is_certain:
             raise NotImplementedError(f"{name} is uncertain")
         return self.value
+
+    def make_uncertain(self) -> "Uncertainty[T]":
+        return Uncertainty(value=self.value, is_certain=False)
 
     def _combine(self, other: "Uncertainty[T]" | T, func: Callable[[T, T], T]) -> "Uncertainty[T]":
         if not isinstance(other, Uncertainty):
@@ -59,8 +71,23 @@ def maybe[T](x: T) -> Uncertainty[T]:
     return Uncertainty(value=x, is_certain=False)
 
 
+def sum_uncertains[T_SFM: SupportsFloatMul](uncertainties: Iterable[Uncertainty[T_SFM]]) -> Uncertainty[T_SFM]:
+    values = list(uncertainties)
+    assert len(values) > 0, "At least one uncertainty is required to sum"
+    first_value = values[0]
+    return sum(values, start=first_value * 0.0)
+
+
 def sum_uncertain_floats(uncertainties: Iterable[Uncertainty[float]]) -> Uncertainty[float]:
-    return sum(uncertainties, start=Uncertainty(value=0.0, is_certain=True))
+    values = list(uncertainties)
+    assert len(values) > 0, "At least one uncertainty is required to sum"
+    return sum(values, certainly(0.0))
+
+
+def join_uncertainties(uncertainties: Iterable[Uncertainty[T]], func: Callable[[Iterable[T]], U]) -> Uncertainty[U]:
+    is_certain = all(u.is_certain for u in uncertainties)
+    values = [u.value for u in uncertainties]
+    return Uncertainty(value=func(values), is_certain=is_certain)
 
 
 def sort_uncertainties(uncertainties: Iterable[Uncertainty[float]]) -> list[Uncertainty[float]]:
@@ -116,9 +143,13 @@ class Statistics:
     def has_infinite_upper_support(self) -> bool:
         return self.max_value.value == np.inf
 
-    def get(
-        self, name: Literal["mean", "variance", "std_dev", "min_value", "max_value"], certain: bool = False
-    ) -> float:
+    def make_uncertain(self) -> "Statistics":
+        return Statistics(
+            moments=[m.make_uncertain() for m in self.moments],
+            support=(self.min_value.make_uncertain(), self.max_value.make_uncertain()),
+        )
+
+    def get(self, name: Literal["mean", "variance", "std_dev", "min_value", "max_value"], certain: bool = False) -> float:
         uncertainty = {
             "mean": self.mean,
             "variance": self.variance,
@@ -202,12 +233,40 @@ class AlgebraicFunction:
 
 
 @dataclass(frozen=True)
-class ContinuousPdf:
+class ProbabilityDensityFunction:
     x: np.ndarray
     y: np.ndarray
+
+    def pdf(self, x: np.ndarray) -> np.ndarray:
+        return np.interp(x, self.x, self.y, left=0.0, right=0.0)
 
 
 @dataclass(frozen=True)
-class DiscretePdf:
+class ProbabilityMassFunction:
     x: np.ndarray
     y: np.ndarray
+
+    def cdf(self, x: np.ndarray) -> np.ndarray:
+        cumulative_probs = np.cumsum(self.y)
+        result = np.empty_like(x, dtype=self.x.dtype)
+        for i, xi in enumerate(x):
+            idx = np.searchsorted(self.x, xi, side="right") - 1
+            if idx < 0:
+                result[i] = 0.0
+            elif idx >= len(cumulative_probs):
+                result[i] = 1.0
+            else:
+                result[i] = cumulative_probs[idx]
+        return result
+
+    def pmf(self, x: np.ndarray) -> np.ndarray:
+        # For values with corresponding y, return y, else return 0.0
+        return np.array([float(np.sum(self.y[self.x == xi])) for xi in x])
+
+    def ppf(self, q: np.ndarray) -> np.ndarray:
+        cumulative_probs = np.cumsum(self.y)
+        result = np.empty_like(q, dtype=self.x.dtype)
+        for i, quantile in enumerate(q):
+            idx = np.searchsorted(cumulative_probs, quantile, side="left")
+            result[i] = self.x[min(idx, len(self.x) - 1)]
+        return result
