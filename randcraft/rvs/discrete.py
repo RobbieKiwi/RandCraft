@@ -2,7 +2,7 @@ from functools import cached_property
 
 import numpy as np
 
-from randcraft.models import ProbabilityMassFunction, Statistics, certainly
+from randcraft.models import ProbabilityMassFunction, Statistics, Uncertainty, certainly
 from randcraft.rvs.base import RV
 
 
@@ -40,14 +40,14 @@ class DiscreteRV(RV):
     def _pmf(self) -> ProbabilityMassFunction:
         return self.calculate_pmf()
 
-    def pmf(self, x: np.ndarray) -> np.ndarray:
-        return self._pmf.pmf(x)
+    def pmf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        return certainly(self._pmf.pmf(x))
 
-    def cdf(self, x: np.ndarray) -> np.ndarray:
-        return self._pmf.cdf(x)
+    def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        return certainly(self._pmf.cdf(x))
 
-    def ppf(self, q: np.ndarray) -> np.ndarray:
-        return self._pmf.ppf(q)
+    def ppf(self, q: np.ndarray) -> Uncertainty[np.ndarray]:
+        return certainly(self._pmf.ppf(q))
 
     def _get_discrete_points(self) -> np.ndarray:
         return np.array(self.values)
@@ -69,15 +69,6 @@ class DiscreteRV(RV):
     def sample_numpy(self, n: int) -> np.ndarray:
         rng = np.random.default_rng()
         return rng.choice(self._values, size=n, p=self._probabilities)
-
-    def _get_plot_range(self) -> tuple[float, float]:
-        min_value = self.statistics.min_value.value
-        max_value = self.statistics.max_value.value
-        low_high_range = max_value - min_value
-        buffer = low_high_range * 0.1
-        if buffer == 0.0:
-            buffer = max(1.0, abs(min_value))
-        return min_value - buffer, max_value + buffer
 
     def copy(self) -> "DiscreteRV":
         return DiscreteRV(values=self.values, probabilities=self.probabilities)
@@ -101,14 +92,14 @@ class DiracDeltaRV(DiscreteRV):
     def value(self) -> float:
         return float(self._values[0])
 
-    def pmf(self, x: np.ndarray) -> np.ndarray:
-        return (x == self.value).astype(float) * 1.0
+    def pmf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        return certainly((x == self.value).astype(float) * 1.0)
 
-    def cdf(self, x: np.ndarray) -> np.ndarray:
-        return (x >= self.value).astype(float) * 1.0
+    def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        return certainly((x >= self.value).astype(float) * 1.0)
 
-    def ppf(self, q: np.ndarray) -> np.ndarray:
-        return np.ones_like(q) * self.value
+    def ppf(self, q: np.ndarray) -> Uncertainty[np.ndarray]:
+        return certainly(np.ones_like(q) * self.value)
 
     def scale(self, x: float) -> "DiracDeltaRV":
         return DiracDeltaRV(value=self.mean * x)

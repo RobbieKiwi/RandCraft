@@ -1,4 +1,4 @@
-from typing import TypeVar, Union
+from typing import TypeVar, Union, overload
 
 import numpy as np
 
@@ -6,9 +6,9 @@ from randcraft.models import Statistics
 from randcraft.pdf_convolver import PdfConvolver
 from randcraft.rvs import (
     RV,
-    AnonymousRV,
     DiracDeltaRV,
 )
+from randcraft.rvs.base import PdfPlotType
 
 __all__ = ["RandomVariable"]
 
@@ -29,46 +29,8 @@ class RandomVariable:
     def __repr__(self) -> str:
         return str(self)
 
-    @property
-    def statistics(self) -> Statistics:
-        return self._rv.statistics
-
-    def get_mean(self, exact: bool = False) -> float:
-        return self._rv.statistics.get(name="mean", certain=exact)
-
-    def get_variance(self, exact: bool = False) -> float:
-        return self._rv.statistics.get(name="variance", certain=exact)
-
-    def get_min_value(self, exact: bool = False) -> float:
-        return self._rv.statistics.get(name="min_value", certain=exact)
-
-    def get_max_value(self, exact: bool = False) -> float:
-        return self._rv.statistics.get(name="max_value", certain=exact)
-
-    def get_chance_that_rv_is_le(self, value: float, exact: bool = False) -> float:
-        if exact and isinstance(self._rv, AnonymousRV):
-            # TODO Move this certainty logic inside the RV class
-            name = AnonymousRV.short_name
-            raise ValueError(f"Exact CDF calculation is not supported for {name} distributions.")
-        return self._rv.cdf(x=np.array([value]))[0]
-
-    def get_value_that_is_at_le_chance(self, chance: float, exact: bool = False) -> float:
-        if exact and isinstance(self._rv, AnonymousRV):
-            # TODO Move this certainty logic inside the RV class
-            name = AnonymousRV.short_name
-            raise ValueError(f"Exact quantile calculation is not supported for {name} distributions.")
-        assert 0.0 <= chance <= 1.0, "Chance must be between 0 and 1."
-        return self._rv.ppf(q=np.array([chance]))[0]
-
-    def sample_numpy(self, n: int) -> np.ndarray:
-        return self._rv.sample_numpy(n=n)
-
-    def sample_one(self) -> float:
-        return self.sample_numpy(1).tolist()[0]
-
     def __add__(self, other: Union["RandomVariable", float]) -> "RandomVariable":
         # Assumes pdfs are not correlated
-        # TODO How to deal with mixtures here?
         if not isinstance(other, RandomVariable):
             rv = DiracDeltaRV(value=float(other))
         else:
@@ -86,6 +48,50 @@ class RandomVariable:
         else:
             return self + (float(other) * -1)
 
+    @property
+    def statistics(self) -> Statistics:
+        return self._rv.statistics
+
+    def get_mean(self, exact: bool = False) -> float:
+        return self._rv.statistics.get(name="mean", certain=exact)
+
+    def get_variance(self, exact: bool = False) -> float:
+        return self._rv.statistics.get(name="variance", certain=exact)
+
+    def get_min_value(self, exact: bool = False) -> float:
+        return self._rv.statistics.get(name="min_value", certain=exact)
+
+    def get_max_value(self, exact: bool = False) -> float:
+        return self._rv.statistics.get(name="max_value", certain=exact)
+
+    @overload
+    def cdf(self, value: float | int, exact: bool = False) -> float: ...
+
+    @overload
+    def cdf(self, value: np.ndarray, exact: bool = False) -> np.ndarray: ...
+
+    def cdf(self, value: np.ndarray | float | int, exact: bool = False) -> float | np.ndarray:
+        if isinstance(value, np.ndarray):
+            return self._rv.cdf(x=value).get(name="cdf", certain=exact)
+        return self.cdf(value=np.array([float(value)]))[0]
+
+    @overload
+    def ppf(self, value: float | int, exact: bool = False) -> float: ...
+
+    @overload
+    def ppf(self, value: np.ndarray, exact: bool = False) -> np.ndarray: ...
+
+    def ppf(self, value: np.ndarray | float | int, exact: bool = False) -> float | np.ndarray:
+        if isinstance(value, np.ndarray):
+            return self._rv.ppf(q=value).get(name="ppf", certain=exact)
+        return self.ppf(value=np.array([value]))[0]
+
+    def sample_numpy(self, n: int) -> np.ndarray:
+        return self._rv.sample_numpy(n=n)
+
+    def sample_one(self) -> float:
+        return self.sample_numpy(1).tolist()[0]
+
     def scale(self, factor: float) -> "RandomVariable":
         if factor == 0.0:
             return RandomVariable(DiracDeltaRV(value=0.0))
@@ -94,10 +100,13 @@ class RandomVariable:
         return RandomVariable(rv=new_pdf)
 
     def multi_sample(self, n: int) -> "RandomVariable":
-        # TODO How to deal with mixtures here?
+        # Return an RV that is the sum of n independent samples of this RV
         if n <= 0:
             raise ValueError("n must be a positive integer.")
         if n == 1:
             return self
         new_rv = PdfConvolver.convolve_pdfs(pdfs=[self._rv] * n)  # type: ignore
         return RandomVariable(rv=new_rv)
+
+    def plot(self, kind: PdfPlotType = "both") -> None:
+        self._rv.plot(kind=kind)

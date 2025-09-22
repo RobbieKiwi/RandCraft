@@ -12,6 +12,8 @@ from randcraft.rvs.scipy_pdf import SciRV
 class PdfConvolver:
     @classmethod
     def convolve_pdfs(cls, pdfs: Sequence[DiscreteRV | ContinuousRV]) -> DiscreteRV | ContinuousRV:
+        # TODO How to deal with mixtures here?
+
         assert len(pdfs) >= 2, "At least two PDFs are required for combination."
         if not all(isinstance(pdf, ContinuousRV | DiscreteRV) for pdf in pdfs):
             types = {pdf.__class__.__name__ for pdf in pdfs}

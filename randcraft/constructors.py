@@ -1,12 +1,9 @@
-from collections.abc import Callable
-
 import numpy as np
 from scipy.stats import beta, gamma, norm, uniform
 from scipy.stats._distn_infrastructure import rv_continuous
 
 from randcraft.random_variable import RandomVariable
 from randcraft.rvs import (
-    AnonymousRV,
     DiracDeltaRV,
     DiscreteRV,
     SciRV,
@@ -18,7 +15,6 @@ __all__ = [
     "make_dirac",
     "make_coin_flip",
     "make_die_roll",
-    "make_anon",
     "make_scipy",
     "make_normal",
     "make_uniform",
@@ -49,11 +45,6 @@ def make_die_roll(sides: int = 6) -> RandomVariable:
     values = list(range(1, sides + 1))
     probabilities = [1 / sides] * sides
     return make_discrete(values=values, probabilities=probabilities)
-
-
-# Misc
-def make_anon(sampler: Callable[[int], np.ndarray]) -> RandomVariable:
-    return RandomVariable(rv=AnonymousRV(sampler=sampler))
 
 
 # Scipy

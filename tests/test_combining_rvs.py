@@ -1,12 +1,6 @@
-import numpy as np
-
-from randcraft import make_anon, make_coin_flip, make_dirac, make_discrete, make_normal, make_uniform
-from randcraft.constructors import make_beta, make_die_roll
+from randcraft.constructors import make_beta, make_coin_flip, make_die_roll, make_dirac, make_discrete, make_normal, make_uniform
 from randcraft.random_variable import RandomVariable
-from randcraft.rvs import (
-    DiracDeltaRV,
-    DiscreteRV,
-)
+from randcraft.rvs import DiracDeltaRV, DiscreteRV
 from tests.base_test_case import BaseTestCase
 
 
@@ -31,28 +25,18 @@ class TestCombiningRvs(BaseTestCase):
     def test_combining_different_types_of_rvs(self) -> None:
         rv1 = make_normal(mean=10, std_dev=2)
         rv2 = make_uniform(low=80, high=120)
-        rv3 = make_anon(sampler=lambda n: np.ones(n) * 15.0)
 
         partial_combined_rv = rv1 + rv2
         self.assertIsInstance(partial_combined_rv, RandomVariable)
         self.assertAlmostEqual(partial_combined_rv.get_mean(exact=True), 10 + 100)
         self.assertAlmostEqual(partial_combined_rv.get_variance(exact=True), rv1.get_variance() + rv2.get_variance())
 
-        combined_rv = rv1 + rv2 + rv3
-
-        self.assertIsInstance(combined_rv, RandomVariable)
-        self.assertAlmostEqual(combined_rv.get_mean(), 10 + 100 + 15)
-        self.assertAlmostEqual(combined_rv.get_variance(), rv1.get_variance() + rv2.get_variance())
-
-        self.assertRaises(NotImplementedError, lambda: rv3.get_mean(exact=True))
-        self.assertRaises(NotImplementedError, lambda: rv3.get_variance(exact=True))
-
     def test_pdf_combination(self) -> None:
         rv1 = make_uniform(low=0, high=10)
         rv2 = make_dirac(value=10)
         combined = rv1 + rv2
-        self.assertEqual(combined.get_chance_that_rv_is_le(value=10), 0.0)
-        self.assertEqual(combined.get_chance_that_rv_is_le(value=20), 1.0)
+        self.assertEqual(combined.cdf(value=10), 0.0)
+        self.assertEqual(combined.cdf(value=20), 1.0)
 
     def test_normal_known_convolutions(self) -> None:
         rv1 = make_normal(mean=1, std_dev=4)
@@ -95,13 +79,6 @@ class TestCombiningRvs(BaseTestCase):
         self.assertIsInstance(rv_div, RandomVariable)
         self.assertAlmostEqual(rv_div.get_mean(), 5 / 2)
         self.assertAlmostEqual(rv_div.get_variance(), rv1.get_variance() / 4)
-
-        rv3 = make_anon(sampler=lambda n: np.ones(n) * 15.0)
-
-        rv3_double = rv3.scale(2)
-        self.assertIsInstance(rv3_double, RandomVariable)
-        self.assertAlmostEqual(rv3_double.get_mean(), 30.0)
-        self.assertAlmostEqual(rv3_double.get_variance(), 0.0)
 
         # Test scale by zero
         rv_zero_scale = rv1.scale(0)
@@ -156,7 +133,7 @@ class TestCombiningRvs(BaseTestCase):
     def test_three_dice(self) -> None:
         dice = make_die_roll(sides=6)
         three_dice = dice + dice + dice
-        result = three_dice.get_chance_that_rv_is_le(10.0)
+        result = three_dice.cdf(10.0)
         self.assertEqual(result, 0.5)
 
     def test_complex_convolution(self) -> None:
@@ -164,8 +141,8 @@ class TestCombiningRvs(BaseTestCase):
         rv = rv_base + rv_base
         discrete = make_discrete(values=[0, 6])
         new_rv = rv + discrete
-        self.assertAlmostEqual(new_rv.get_chance_that_rv_is_le(-2.0), 0.0, places=3)
-        self.assertAlmostEqual(new_rv.get_chance_that_rv_is_le(0.0), 0.25, places=3)
-        self.assertAlmostEqual(new_rv.get_chance_that_rv_is_le(3.0), 0.5, places=3)
-        self.assertAlmostEqual(new_rv.get_chance_that_rv_is_le(6.0), 0.75, places=3)
-        self.assertAlmostEqual(new_rv.get_chance_that_rv_is_le(8.0), 1.0, places=3)
+        self.assertAlmostEqual(new_rv.cdf(-2.0), 0.0, places=3)
+        self.assertAlmostEqual(new_rv.cdf(0.0), 0.25, places=3)
+        self.assertAlmostEqual(new_rv.cdf(3.0), 0.5, places=3)
+        self.assertAlmostEqual(new_rv.cdf(6.0), 0.75, places=3)
+        self.assertAlmostEqual(new_rv.cdf(8.0), 1.0, places=3)

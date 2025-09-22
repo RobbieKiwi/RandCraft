@@ -2,10 +2,10 @@ from collections.abc import Sequence
 from functools import cached_property
 
 import numpy as np
-from scipy.integrate import cumulative_trapezoid
 from scipy.signal import fftconvolve
 
-from randcraft.models import ProbabilityDensityFunction, Statistics, sum_uncertain_floats
+from randcraft.models import ProbabilityDensityFunction, Statistics, Uncertainty, sum_uncertain_floats
+from randcraft.rvs.base import CdfEstimator
 from randcraft.rvs.continuous import ContinuousRV
 from randcraft.rvs.discrete import DiracDeltaRV, DiscreteRV
 
@@ -104,52 +104,14 @@ class MultiRV(ContinuousRV):
         return np.interp(x, x2, combined_pdf)
 
     @cached_property
-    def _cdf(self) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Returns two numpy arrays (x_values, cumulative_probabilities) representing the CDF.
-        The chance that x < value can be found by interpolating cumulative_probabilities at value.
-        """
-        mean = self.statistics.mean.value
-        std_dev = self.statistics.std_dev.value
-        has_finite_lower_support = not np.isinf(self.statistics.min_value.value)
-        has_finite_upper_support = not np.isinf(self.statistics.max_value.value)
+    def _cdf_estimator(self) -> CdfEstimator:
+        return CdfEstimator(rv=self)
 
-        if has_finite_lower_support and has_finite_upper_support:
-            lower = self.statistics.min_value.value
-            upper = self.statistics.max_value.value
-        elif has_finite_lower_support:
-            lower = self.statistics.min_value.value
-            upper = lower + 6 * std_dev
-        elif has_finite_upper_support:
-            upper = self.statistics.max_value.value
-            lower = upper - 6 * std_dev
-        else:
-            lower = mean - 3 * std_dev
-            upper = mean + 3 * std_dev
+    def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        return self._cdf_estimator.cdf(x)
 
-        x_values = np.linspace(lower, upper, 10000)
-        pdf_vals = self.calculate_pdf(x_values).y
-
-        cdf_vals = cumulative_trapezoid(pdf_vals, x_values, initial=0)
-        if cdf_vals[-1] < 1:
-            remainder = 1 - cdf_vals[-1]
-            cdf_vals = cdf_vals + remainder / 2
-            x_values = np.concatenate(([-np.inf], x_values, [np.inf]))
-            cdf_vals = np.concatenate(([0.0], cdf_vals, [1.0]))
-        else:
-            cdf_vals /= cdf_vals[-1]  # Normalize
-            cdf_vals[0] = 0.0
-            cdf_vals[-1] = 1.0
-
-        return x_values, cdf_vals
-
-    def cdf(self, x: np.ndarray) -> np.ndarray:
-        x_values, cumulative_probs = self._cdf
-        return np.interp(x, x_values, cumulative_probs)
-
-    def ppf(self, x: np.ndarray) -> np.ndarray:
-        x_values, cumulative_probs = self._cdf
-        return np.interp(x, cumulative_probs, x_values)
+    def ppf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        return self._cdf_estimator.ppf(x)
 
     def scale(self, x: float) -> "MultiRV":
         x = float(x)

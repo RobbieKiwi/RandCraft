@@ -3,7 +3,7 @@ from functools import cached_property
 import numpy as np
 from scipy.stats._distn_infrastructure import rv_continuous, rv_continuous_frozen
 
-from randcraft.models import AlgebraicFunction, ProbabilityDensityFunction, Statistics, certainly
+from randcraft.models import AlgebraicFunction, ProbabilityDensityFunction, Statistics, Uncertainty, certainly
 from randcraft.rvs.continuous import ContinuousRV, ScaledRV
 
 
@@ -93,11 +93,11 @@ class SciRV(ContinuousRV):
     def calculate_pdf(self, x: np.ndarray) -> ProbabilityDensityFunction:
         return ProbabilityDensityFunction(x=x, y=self.scipy_rv.pdf(x))
 
-    def cdf(self, x: np.ndarray) -> np.ndarray:
-        return self.scipy_rv.cdf(x)
+    def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        return certainly(self.scipy_rv.cdf(x))
 
-    def ppf(self, x: np.ndarray) -> np.ndarray:
-        return self.scipy_rv.ppf(x)
+    def ppf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        return certainly(self.scipy_rv.ppf(x))
 
     def copy(self) -> "SciRV":
         return self.scale(1.0)  # type: ignore

@@ -3,9 +3,8 @@ from functools import cached_property
 
 import numpy as np
 
-from randcraft.models import ProbabilityDensityFunction, ProbabilityMassFunction, Statistics, sum_uncertain_floats
-from randcraft.rvs.anonymous import AnonymousRV
-from randcraft.rvs.base import RV
+from randcraft.models import ProbabilityDensityFunction, ProbabilityMassFunction, Statistics, Uncertainty, join_uncertainties, sum_uncertain_floats
+from randcraft.rvs.base import RV, CdfEstimator
 from randcraft.rvs.continuous import ContinuousRV
 from randcraft.rvs.discrete import DiscreteRV
 
@@ -60,10 +59,6 @@ class MixtureRV(RV):
     def probabilities(self) -> list[float]:
         return self._probabilities
 
-    @cached_property
-    def _anonymous_pdf(self) -> AnonymousRV:
-        return AnonymousRV(sampler=self.sample_numpy, n_samples=10000, external_statistics=self.statistics)
-
     def _get_discrete_points(self) -> np.ndarray:
         return np.sort(np.unique(np.concatenate([pdf._get_discrete_points() for pdf in self.pdfs])))
 
@@ -87,15 +82,22 @@ class MixtureRV(RV):
                 samples[pdf_choices == i] = self.pdfs[i].sample_numpy(num_samples)
         return samples
 
-    def ppf(self, x: np.ndarray) -> np.ndarray:
-        # Use numerical approximation
-        return self._anonymous_pdf.ppf(x)
+    @cached_property
+    def _cdf_estimator(self) -> CdfEstimator:
+        return CdfEstimator(rv=self)
 
-    def cdf(self, x: np.ndarray) -> np.ndarray:
-        cdf = np.sum([pdf.cdf(x) * p for pdf, p in zip(self.pdfs, self.probabilities)], axis=0)
-        cdf[x > self.statistics.max_value.value] = 1.0
-        cdf[x <= self.statistics.min_value.value] = 0.0
-        return cdf
+    def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        def func(cdfs: list[np.ndarray]) -> np.ndarray:
+            cdf = np.sum([cdf * p for cdf, p in zip(cdfs, self.probabilities)], axis=0)
+            cdf[x > self.statistics.max_value.value] = 1.0
+            cdf[x <= self.statistics.min_value.value] = 0.0
+            return cdf
+
+        cdfs = [pdf.cdf(x) for pdf in self.pdfs]
+        return join_uncertainties(uncertainties=cdfs, func=func)  # type: ignore
+
+    def ppf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
+        return self._cdf_estimator.ppf(x)
 
     def calculate_pdf(self, x: np.ndarray) -> ProbabilityDensityFunction | None:
         pdf_prob_pairs = [(pdf, p) for pdf, p in zip(self.pdfs, self.probabilities) if isinstance(pdf, ContinuousRV)]
@@ -126,17 +128,6 @@ class MixtureRV(RV):
         y = np.array(probs)
         x = np.array(values)
         return ProbabilityMassFunction(x=x, y=y)
-
-    def _get_plot_range(self) -> tuple[float, float]:
-        lows: list[float] = []
-        highs: list[float] = []
-        for pdf in self.pdfs:
-            low, high = pdf._get_plot_range()
-            lows.append(low)
-            highs.append(high)
-        start = min(lows)
-        end = max(highs)
-        return start, end
 
     def copy(self) -> "MixtureRV":
         return MixtureRV(pdfs=self.pdfs, probabilities=self.probabilities)
