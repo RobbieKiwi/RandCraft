@@ -70,11 +70,11 @@ from randcraft.constructors import make_die_roll
 
 die = make_die_roll(sides=6)
 # <RandomVariable(discrete): mean=3.5, var=2.92>
-three_dice = dice.multi_sample(3)
+three_dice = die.multi_sample(3)
 # <RandomVariable(discrete): mean=10.5, var=8.75>
 three_dice.cdf(10.0)
 # 0.5
-three_dice.ppf(10.0)
+three_dice.ppf(0.5)
 # 10.0
 ```
 
