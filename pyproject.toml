@@ -1,6 +1,6 @@
 [project]
 name = "randcraft"
-version = "0.1.4"
+version = "0.1.5"
 description = "An object-oriented approach to defining and combining random variables"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -10,6 +10,11 @@ dependencies = [
     "pandas>=2.3.0",
     "scipy>=1.16.1",
 ]
+
+[project.urls]
+Homepage = "https://github.com/RobbieKiwi/RandCraft/"
+Source = "https://github.com/RobbieKiwi/RandCraft/"
+PyPI = "https://pypi.org/project/randcraft/"
 
 [dependency-groups]
 dev = [
