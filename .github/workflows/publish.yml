@@ -35,9 +35,6 @@ jobs:
       - name: Install the project
         run: uv sync --locked --all-extras --dev
 
-      - name: Bump version
-        run: uv semantic-release
-
       - name: Build release distributions
         run: |
           uv build
