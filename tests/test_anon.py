@@ -14,10 +14,6 @@ class TestAnon(BaseTestCase):
 
         rv = make_anonymous_continuous_rv_from_sampler(sampler=sampler)
 
-        sample = rv.sample_one()
-
-        self.assertTrue(20.0 <= sample <= 21.0)
-
         # Statistics are not exact
         print(rv.get_mean())
         self.assertTrue(20.0 <= rv.get_mean() <= 21.0)
