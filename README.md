@@ -150,3 +150,10 @@ Built on [scipy.stats](https://docs.scipy.org/doc/scipy/reference/stats.html).
 ![Double normal](images/double_normal.png)
 ## Mixture
 ![Mixture](images/mixture.png)
+
+
+# Images
+## Double normal
+![Double normal](images/double_normal.png)
+## Mixture
+![Mixture](images/mixture.png)
