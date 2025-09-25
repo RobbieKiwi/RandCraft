@@ -21,7 +21,6 @@ combined.sample_one()
 combined.plot()
 ```
 ![Double normal](https://github.com/RobbieKiwi/RandCraft/blob/68607c6a4cefb97aa5c94614ed0ff05901e6a45a/images/double_normal.png?raw=true)
-[Image not loading?](#double-normal)
 
 ## Features
 
@@ -127,7 +126,6 @@ mixture = mix_rvs([rv1, rv2, combined, discrete])
 mixture.plot()
 ```
 ![Mixture](https://github.com/RobbieKiwi/RandCraft/blob/68607c6a4cefb97aa5c94614ed0ff05901e6a45a/images/mixture.png?raw=true)
-[Image not loading?](#mixture)
 
 ## Extending RandCraft
 
@@ -144,16 +142,3 @@ MIT License
 ## Acknowledgements
 
 Built on [scipy.stats](https://docs.scipy.org/doc/scipy/reference/stats.html).
-
-# Images
-## Double normal
-![Double normal](images/double_normal.png)
-## Mixture
-![Mixture](images/mixture.png)
-
-
-# Images
-## Double normal
-![Double normal](images/double_normal.png)
-## Mixture
-![Mixture](images/mixture.png)
