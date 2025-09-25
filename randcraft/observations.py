@@ -18,11 +18,10 @@ def make_gaussian_kde(
     weights: np.ndarray | None = None,
 ) -> RandomVariable:
     """
-    Using a set of observations and a kernel, create a kernel density estimate (KDE).
+    Using a set of observations create a gaussian kernel density estimate (KDE) using scipy.stats.gaussian_kde
 
     Args:
         observations (np.ndarray): Either a 1D numpy array of observations or a RandomVariable containing a discrete distribution of observations.
-        kernel (RandomVariable | None, optional): The kernel to use for the KDE. Defaults to None.
         bw_method (str | float | Callable | None, optional): The bandwidth selector for the scipy gaussian_kde method. Defaults to None.
         weights (np.ndarray | None, optional): The weights to use for the KDE. Defaults to None.
 
