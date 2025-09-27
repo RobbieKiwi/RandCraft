@@ -105,6 +105,18 @@ rv_joined = rv_a + rv_b
 ```
 Uses `gaussian_kde` by `scipy.stats` under the hood. You also have the option to pass arguments for `gaussian_kde`, or provide your own kernel as a `RandomVariable`.
 
+### Central limit theorom
+```python
+from randcraft import make_uniform
+
+rv = make_uniform(low=0, high=1)
+# <RandomVariable(scipy-uniform): mean=0.5, var=0.0833>
+joined = rv.multi_sample(n=10)
+# <RandomVariable(multi): mean=5.0, var=0.833>
+joined.plot()
+# It looks normal :)
+```
+
 ### Mixing continuous and discrete variables
 You have observations of two independent random variables. You want to use kernal density estimation to create continuous random variables for each and then add them together.
 ```python
@@ -121,9 +133,9 @@ discrete = make_discrete(values=[1, 2, 3])
 # <RandomVariable(discrete): mean=2.0, var=0.667>
 
 # Make a new rv which has a random chance of drawing from one of the other 4 rvs
-mixture = mix_rvs([rv1, rv2, combined, discrete])
+mixed = mix_rvs([rv1, rv2, combined, discrete])
 # <RandomVariable(mixture): mean=0.5, var=1.58>
-mixture.plot()
+mixed.plot()
 ```
 ![Mixture](https://github.com/RobbieKiwi/RandCraft/blob/68607c6a4cefb97aa5c94614ed0ff05901e6a45a/images/mixture.png?raw=true)
 

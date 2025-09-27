@@ -32,3 +32,8 @@ class TestPlotting(TestCase):
 
         new_rv = rv.scale(-1) - 2
         new_rv.plot()
+
+    def test_central_limit(self) -> None:
+        rv = make_uniform(low=0, high=1)
+        joined = rv.multi_sample(n=10)
+        joined.plot()
