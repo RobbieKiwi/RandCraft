@@ -114,8 +114,9 @@ rv = make_uniform(low=0, high=1)
 joined = rv.multi_sample(n=10)
 # <RandomVariable(multi): mean=5.0, var=0.833>
 joined.plot()
-# It looks normal :)
 ```
+![CentralLimit](https://github.com/RobbieKiwi/RandCraft/blob/f701111797b1904901bbf6fe9a62620327d5ebcf/images/central_limit.png?raw=true)
+
 
 ### Mixing continuous and discrete variables
 You have observations of two independent random variables. You want to use kernal density estimation to create continuous random variables for each and then add them together.
@@ -137,7 +138,7 @@ mixed = mix_rvs([rv1, rv2, combined, discrete])
 # <RandomVariable(mixture): mean=0.5, var=1.58>
 mixed.plot()
 ```
-![Mixture](https://github.com/RobbieKiwi/RandCraft/blob/68607c6a4cefb97aa5c94614ed0ff05901e6a45a/images/mixture.png?raw=true)
+![Mixture](https://github.com/RobbieKiwi/RandCraft/blob/f701111797b1904901bbf6fe9a62620327d5ebcf/images/mixture.png?raw=true)
 
 ## Extending RandCraft
 
