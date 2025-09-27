@@ -34,7 +34,7 @@ combined.plot()
 
 RandCraft currently supports the following distributions:
 
-- Normal, Uniform, Beta, Gamma + any other parametric continuous distribution from scipy.stats
+- Normal, Uniform, Beta, Gamma, Lognormal + any other parametric continuous distribution from scipy.stats
 - Discrete
 - DiracDelta
 - Gaussian kde distribution from provided observations
