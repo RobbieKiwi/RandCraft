@@ -1,6 +1,9 @@
+import numpy as np
+
 from randcraft.constructors import make_beta, make_coin_flip, make_die_roll, make_dirac, make_discrete, make_normal, make_uniform
 from randcraft.random_variable import RandomVariable
 from randcraft.rvs import DiracDeltaRV, DiscreteRV
+from randcraft.rvs.continuous import ContinuousRV
 from tests.base_test_case import BaseTestCase
 
 
@@ -95,6 +98,26 @@ class TestCombiningRvs(BaseTestCase):
         self.assertIsInstance(offset, RandomVariable)
         self.assertAlmostEqual(offset.get_mean(exact=True), 6)
         self.assertAlmostEqual(offset.get_variance(exact=True), rv1.get_variance())
+
+    def test_uniform_convolution_double(self) -> None:
+        rv1 = make_uniform(low=0, high=2)
+        joined = rv1.multi_sample(2)
+        inner_rv: ContinuousRV = joined._rv  # type: ignore
+        values = np.array([0, 1, 2, 3, 4])
+        pdf = inner_rv.calculate_pdf(x=values)
+        expected_values = [0, 0.25, 0.5, 0.25, 0.0]
+        for v, ev in zip(pdf.y, expected_values):
+            self.assertAlmostEqual(v, ev, places=3)
+
+    def test_uniform_convolution_triple(self) -> None:
+        rv1 = make_uniform(low=0, high=2)
+        joined = rv1.multi_sample(3)
+        inner_rv: ContinuousRV = joined._rv  # type: ignore
+        values = np.array([0, 1, 2, 3, 4, 5, 6])
+        pdf = inner_rv.calculate_pdf(x=values)
+        self.assertAlmostEqual(pdf.y[0], 0.0, places=3)
+        self.assertAlmostEqual(pdf.y[-1], 0.0, places=3)
+        self.assertEqual(np.argmax(pdf.y), 3)
 
     def test_uniform_multiplications(self) -> None:
         rv1 = make_uniform(low=0, high=10)

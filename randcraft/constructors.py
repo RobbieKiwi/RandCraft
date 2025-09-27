@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import beta, gamma, norm, uniform
+from scipy.stats import beta, gamma, lognorm, norm, uniform
 from scipy.stats._distn_infrastructure import rv_continuous
 
 from randcraft.random_variable import RandomVariable
@@ -10,17 +10,7 @@ from randcraft.rvs import (
 )
 from randcraft.utils import clean_1d_array
 
-__all__ = [
-    "make_discrete",
-    "make_dirac",
-    "make_coin_flip",
-    "make_die_roll",
-    "make_scipy",
-    "make_normal",
-    "make_uniform",
-    "make_beta",
-    "make_gamma",
-]
+__all__ = ["make_discrete", "make_dirac", "make_coin_flip", "make_die_roll", "make_scipy", "make_normal", "make_uniform", "make_beta", "make_gamma", "make_log_normal"]
 
 
 # Discrete
@@ -75,3 +65,9 @@ def make_gamma(a: float | int, scale: float | int) -> RandomVariable:
     a = float(a)
     scale = float(scale)
     return make_scipy(scipy_rv=gamma, a=a, scale=scale)
+
+
+def make_log_normal(mean: float | int, std_dev: float | int) -> RandomVariable:
+    mean = float(mean)
+    std_dev = float(std_dev)
+    return make_scipy(scipy_rv=lognorm, s=std_dev, scale=np.exp(mean))

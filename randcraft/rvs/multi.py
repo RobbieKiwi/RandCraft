@@ -86,22 +86,49 @@ class MultiRV(ContinuousRV):
         return ProbabilityDensityFunction(x=x, y=result)
 
     def _calculate_continuous_pdf(self, x: np.ndarray) -> np.ndarray:
-        if len(self.continuous_pdfs) == 1:
+        C = len(self.continuous_pdfs)
+        if C == 1:
             return self.continuous_pdfs[0].calculate_pdf(x).y
-
         assert x.ndim == 1, "Input numpy array must be 1D"
-        low = np.min(x)
-        high = np.max(x)
+        return self._continuous_pdf_ref.evaluate(x=x)
+
+    @cached_property
+    def _continuous_pdf_ref(self) -> ProbabilityDensityFunction:
+        C = len(self.continuous_pdfs)
+        N = 10000
+
+        if self.statistics.has_infinite_lower_support:
+            low = self.mean - 5 * self.std_dev
+        else:
+            low = self.statistics.support[0].value
+        low = min(low, 0.0)
+
+        if self.statistics.has_infinite_upper_support:
+            high = self.mean + 5 * self.std_dev
+        else:
+            high = self.statistics.support[1].value
+        high = max(high, 0.0)
+
         spread = high - low
+        spread = max(spread, 1.0)  # Ensure some minimum spread
         start = low - spread
         end = high + spread
-        x2 = np.linspace(start, end, len(x) * 3)
-        raw_pdfs = [pdf.calculate_pdf(x2).y for pdf in self.continuous_pdfs]
-        combined_pdf = fftconvolve(raw_pdfs[0], raw_pdfs[1], mode="same")
-        for pdf in raw_pdfs[2:]:
-            combined_pdf = fftconvolve(combined_pdf, pdf, mode="same")
-        combined_pdf /= np.trapezoid(combined_pdf, x2)  # Normalize
-        return np.interp(x, x2, combined_pdf)
+        x2 = np.linspace(start, end, N)
+        zero_pad = np.zeros(N)
+
+        def pad(arr: np.ndarray) -> np.ndarray:
+            return np.concatenate((zero_pad, arr, zero_pad))
+
+        pdfs = [pad(pdf.calculate_pdf(x2).y) for pdf in self.continuous_pdfs]
+
+        full_pdf = fftconvolve(pdfs[0], pdfs[1], mode="full")
+        for pdf in pdfs[2:]:
+            full_pdf = fftconvolve(full_pdf, pdf, mode="full")
+
+        new_x = np.linspace(start * C, end * C, C * (N - 1) + 1)
+        short_pdf = full_pdf[N * C : N * C + len(new_x)]
+        short_pdf /= np.trapezoid(short_pdf, new_x)  # Normalize
+        return ProbabilityDensityFunction(x=new_x, y=short_pdf)
 
     @cached_property
     def _cdf_estimator(self) -> CdfEstimator:

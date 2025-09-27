@@ -237,7 +237,7 @@ class ProbabilityDensityFunction:
     x: np.ndarray
     y: np.ndarray
 
-    def pdf(self, x: np.ndarray) -> np.ndarray:
+    def evaluate(self, x: np.ndarray) -> np.ndarray:
         return np.interp(x, self.x, self.y, left=0.0, right=0.0)
 
 
