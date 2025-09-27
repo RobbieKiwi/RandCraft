@@ -105,7 +105,7 @@ rv_joined = rv_a + rv_b
 ```
 Uses `gaussian_kde` by `scipy.stats` under the hood. You also have the option to pass arguments for `gaussian_kde`, or provide your own kernel as a `RandomVariable`.
 
-### Central limit theorom
+### Adding uniforms until they look normal
 ```python
 from randcraft import make_uniform
 
