@@ -2,12 +2,12 @@ from collections.abc import Sequence
 from functools import cached_property
 
 import numpy as np
-from scipy.signal import fftconvolve
 
 from randcraft.models import ProbabilityDensityFunction, Statistics, Uncertainty, sum_uncertain_floats
 from randcraft.rvs.base import CdfEstimator
 from randcraft.rvs.continuous import ContinuousRV
 from randcraft.rvs.discrete import DiracDeltaRV, DiscreteRV
+from randcraft.utils.fft_convolve import fftconvolve
 
 
 class MultiRV(ContinuousRV):
