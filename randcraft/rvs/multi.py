@@ -101,25 +101,23 @@ class MultiRV(ContinuousRV):
             low = self.mean - 5 * self.std_dev
         else:
             low = self.statistics.support[0].value
-        low = min(low, 0.0)
 
         if self.statistics.has_infinite_upper_support:
             high = self.mean + 5 * self.std_dev
         else:
             high = self.statistics.support[1].value
-        high = max(high, 0.0)
 
         spread = high - low
-        spread = max(spread, 1.0)  # Ensure some minimum spread
-        start = low - spread
-        end = high + spread
-        x2 = np.linspace(start, end, N)
+        if spread == 0:
+            low = low - 1
+            high = high + 1
+        x2 = np.linspace(low, high, N)
 
         pdfs = [pdf.calculate_pdf(x2).y for pdf in self.continuous_pdfs]
 
         full_pdf = fftconvolve(pdfs)
 
-        new_x = np.linspace(start * C, end * C, C * (N - 1) + 1)
+        new_x = np.linspace(low * C, high * C, C * (N - 1) + 1)
 
         full_pdf /= np.trapezoid(full_pdf, new_x)  # Normalize
         return ProbabilityDensityFunction(x=new_x, y=full_pdf)
