@@ -112,11 +112,11 @@ from randcraft import make_uniform
 
 rv = make_uniform(low=0, high=1)
 # <RandomVariable(scipy-uniform): mean=0.5, var=0.0833>
-rv_sample_mean = rv.multi_sample(n=10)/10
-# <RandomVariable(multi): mean=0.5, var=0.00833>
+rv_sample_mean = rv.multi_sample(n=30)/30
+# <RandomVariable(multi): mean=0.5, var=0.00278>
 rv_sample_mean.plot()
 ```
-![CentralLimit](https://github.com/RobbieKiwi/RandCraft/blob/f701111797b1904901bbf6fe9a62620327d5ebcf/images/central_limit.png?raw=true)
+![CentralLimit](https://github.com/RobbieKiwi/RandCraft/blob/2c7ce4215fcefa3051c8a2195f2366c423c925ef/images/central_limit.png?raw=true)
 
 
 ### Mixing continuous and discrete variables
