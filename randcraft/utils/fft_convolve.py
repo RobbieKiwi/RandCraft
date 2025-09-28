@@ -1,64 +1,20 @@
 import numpy as np
-from scipy import fft as sp_fft
+from scipy.fft import irfftn as ifft
+from scipy.fft import next_fast_len
+from scipy.fft import rfftn as fft
 
 
-def _freq_domain_conv(in1: np.ndarray, in2: np.ndarray, N: int) -> np.ndarray:
-    """
-    Convolve two arrays in the frequency domain.
-
-    Parameters
-    ----------
-    in1 : array_like
-        First input.
-    in2 : array_like
-        Second input. Should have the same number of dimensions as `in1`.
-    N: int
-        The length of the output array.
-
-    Returns
-    -------
-    out : array
-        An N-dimensional array containing the discrete linear convolution of
-        `in1` with `in2`.
-
-    """
-    fshape = [sp_fft.next_fast_len(N, True)]
+def fftconvolve(arrs: list[np.ndarray]) -> np.ndarray:
+    N = sum([len(arr) for arr in arrs]) - (len(arrs) - 1)
+    fshape = [next_fast_len(N, True)]
     axes = [0]
-    shape = [N]
 
-    fft, ifft = sp_fft.rfftn, sp_fft.irfftn
+    sps = np.stack([fft(arr, fshape, axes=axes) for arr in arrs])  # type: ignore
+    # Use reduce to avoid complex number overflow issues
+    prod = np.prod(sps, axis=0, dtype=np.complex128)
 
-    sp1 = fft(in1, fshape, axes=axes)
-    sp2 = fft(in2, fshape, axes=axes)
+    ret = ifft(prod, fshape, axes=axes)
 
-    ret = ifft(sp1 * sp2, fshape, axes=axes)
-
-    fslice = tuple([slice(sz) for sz in shape])
-    ret = ret[fslice]
-
-    return ret
-
-
-def fftconvolve(in1, in2):
-    """
-    Convolve two N-dimensional arrays using FFT.
-
-
-    Parameters
-    ----------
-    in1 : array_like
-        First input.
-    in2 : array_like
-        Second input. Should have the same number of dimensions as `in1`.
-
-
-    Returns
-    -------
-    out : array
-        An N-dimensional array containing a subset of the discrete linear
-        convolution of `in1` with `in2`.
-
-    """
-
-    N = len(in1) + len(in2) - 1
-    return _freq_domain_conv(in1=in1, in2=in2, N=N)
+    # Ensure we get a proper numpy array and take real part
+    ret_array = np.asarray(ret)
+    return np.real(ret_array[:N])
