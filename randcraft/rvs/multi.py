@@ -121,9 +121,9 @@ class MultiRV(ContinuousRV):
 
         pdfs = [pad(pdf.calculate_pdf(x2).y) for pdf in self.continuous_pdfs]
 
-        full_pdf = fftconvolve(pdfs[0], pdfs[1], mode="full")
+        full_pdf = fftconvolve(pdfs[0], pdfs[1])
         for pdf in pdfs[2:]:
-            full_pdf = fftconvolve(full_pdf, pdf, mode="full")
+            full_pdf = fftconvolve(full_pdf, pdf)
 
         new_x = np.linspace(start * C, end * C, C * (N - 1) + 1)
         short_pdf = full_pdf[N * C : N * C + len(new_x)]
