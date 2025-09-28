@@ -56,6 +56,7 @@ pip install randcraft
 
 - `make_normal`, `make_uniform` ...etc: Create a random variable
 - Addition subtraction with constants or other RVs: `+`, `-`
+- Division by constant to scale RV values
 - `.sample_numpy(size)`: Draw samples
 - `.get_mean()`, `.get_variance()`: Get statistics
 - `.cdf(x)`: Evaluate cdf at points
@@ -105,17 +106,17 @@ rv_joined = rv_a + rv_b
 ```
 Uses `gaussian_kde` by `scipy.stats` under the hood. You also have the option to pass arguments for `gaussian_kde`, or provide your own kernel as a `RandomVariable`.
 
-### Adding uniforms until they look normal
+### The central limit theorem
 ```python
 from randcraft import make_uniform
 
 rv = make_uniform(low=0, high=1)
 # <RandomVariable(scipy-uniform): mean=0.5, var=0.0833>
-joined = rv.multi_sample(n=10)
-# <RandomVariable(multi): mean=5.0, var=0.833>
-joined.plot()
+rv_sample_mean = rv.multi_sample(n=30)/30
+# <RandomVariable(multi): mean=0.5, var=0.00278>
+rv_sample_mean.plot()
 ```
-![CentralLimit](https://github.com/RobbieKiwi/RandCraft/blob/f701111797b1904901bbf6fe9a62620327d5ebcf/images/central_limit.png?raw=true)
+![CentralLimit](https://github.com/RobbieKiwi/RandCraft/blob/2c7ce4215fcefa3051c8a2195f2366c423c925ef/images/central_limit.png?raw=true)
 
 
 ### Mixing continuous and discrete variables

@@ -8,7 +8,7 @@ from randcraft.rvs import (
     DiscreteRV,
     SciRV,
 )
-from randcraft.utils import clean_1d_array
+from randcraft.utils.arrays import clean_1d_array
 
 __all__ = ["make_discrete", "make_dirac", "make_coin_flip", "make_die_roll", "make_scipy", "make_normal", "make_uniform", "make_beta", "make_gamma", "make_log_normal"]
 

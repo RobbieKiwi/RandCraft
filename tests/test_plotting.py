@@ -35,5 +35,6 @@ class TestPlotting(TestCase):
 
     def test_central_limit(self) -> None:
         rv = make_uniform(low=0, high=1)
-        joined = rv.multi_sample(n=10)
-        joined.plot()
+        sample_mean_rv = rv.multi_sample(n=30) / 30
+        print(sample_mean_rv)
+        sample_mean_rv.plot()

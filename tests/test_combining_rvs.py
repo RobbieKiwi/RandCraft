@@ -2,7 +2,7 @@ import numpy as np
 
 from randcraft.constructors import make_beta, make_coin_flip, make_die_roll, make_dirac, make_discrete, make_normal, make_uniform
 from randcraft.random_variable import RandomVariable
-from randcraft.rvs import DiracDeltaRV, DiscreteRV
+from randcraft.rvs import DiracDeltaRV, DiscreteRV, MultiRV
 from randcraft.rvs.continuous import ContinuousRV
 from tests.base_test_case import BaseTestCase
 
@@ -118,6 +118,15 @@ class TestCombiningRvs(BaseTestCase):
         self.assertAlmostEqual(pdf.y[0], 0.0, places=3)
         self.assertAlmostEqual(pdf.y[-1], 0.0, places=3)
         self.assertEqual(np.argmax(pdf.y), 3)
+
+    def test_central_limit(self) -> None:
+        rv = make_uniform(low=0, high=2)
+        sample_mean_rv = rv.multi_sample(n=30)
+        inner_rv: MultiRV = sample_mean_rv._rv  # type: ignore
+        pdf = inner_rv._continuous_pdf_ref
+        peak_loc = np.argmax(pdf.y)
+        peak_value = pdf.x[peak_loc]
+        self.assertAlmostEqual(peak_value, 30, places=1)
 
     def test_uniform_multiplications(self) -> None:
         rv1 = make_uniform(low=0, high=10)

@@ -2,12 +2,12 @@ from collections.abc import Sequence
 from functools import cached_property
 
 import numpy as np
-from scipy.signal import fftconvolve
 
 from randcraft.models import ProbabilityDensityFunction, Statistics, Uncertainty, sum_uncertain_floats
 from randcraft.rvs.base import CdfEstimator
 from randcraft.rvs.continuous import ContinuousRV
 from randcraft.rvs.discrete import DiracDeltaRV, DiscreteRV
+from randcraft.utils.fft_convolve import fftconvolve
 
 
 class MultiRV(ContinuousRV):
@@ -114,21 +114,15 @@ class MultiRV(ContinuousRV):
         start = low - spread
         end = high + spread
         x2 = np.linspace(start, end, N)
-        zero_pad = np.zeros(N)
 
-        def pad(arr: np.ndarray) -> np.ndarray:
-            return np.concatenate((zero_pad, arr, zero_pad))
+        pdfs = [pdf.calculate_pdf(x2).y for pdf in self.continuous_pdfs]
 
-        pdfs = [pad(pdf.calculate_pdf(x2).y) for pdf in self.continuous_pdfs]
-
-        full_pdf = fftconvolve(pdfs[0], pdfs[1], mode="full")
-        for pdf in pdfs[2:]:
-            full_pdf = fftconvolve(full_pdf, pdf, mode="full")
+        full_pdf = fftconvolve(pdfs)
 
         new_x = np.linspace(start * C, end * C, C * (N - 1) + 1)
-        short_pdf = full_pdf[N * C : N * C + len(new_x)]
-        short_pdf /= np.trapezoid(short_pdf, new_x)  # Normalize
-        return ProbabilityDensityFunction(x=new_x, y=short_pdf)
+
+        full_pdf /= np.trapezoid(full_pdf, new_x)  # Normalize
+        return ProbabilityDensityFunction(x=new_x, y=full_pdf)
 
     @cached_property
     def _cdf_estimator(self) -> CdfEstimator:

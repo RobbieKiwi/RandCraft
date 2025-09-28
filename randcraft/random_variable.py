@@ -48,6 +48,9 @@ class RandomVariable:
         else:
             return self + (float(other) * -1)
 
+    def __truediv__(self, other: float) -> "RandomVariable":
+        return self.scale(1 / float(other))
+
     @property
     def statistics(self) -> Statistics:
         return self._rv.statistics
