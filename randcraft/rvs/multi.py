@@ -4,7 +4,6 @@ from functools import cached_property
 import numpy as np
 
 from randcraft.models import ProbabilityDensityFunction, Statistics, Uncertainty, sum_uncertain_floats
-from randcraft.rvs import RV
 from randcraft.rvs.base import CdfEstimator
 from randcraft.rvs.continuous import ContinuousRV
 from randcraft.rvs.discrete import DiracDeltaRV, DiscreteRV
@@ -147,6 +146,6 @@ class MultiRV(ContinuousRV):
     def copy(self) -> "MultiRV":
         return MultiRV(continuous_pdfs=self.continuous_pdfs, discrete_pdf=self.discrete_pdf)
 
-    def _get_all_rvs(self) -> list[RV]:
-        inner_rvs = [pdf._get_all_rvs() for pdf in self.pdfs]
-        return [rv for sublist in inner_rvs for rv in sublist]
+    def _get_all_seeds(self) -> list[int | None]:
+        inner_seeds = [pdf._get_all_seeds() for pdf in self.pdfs]
+        return [s for sublist in inner_seeds for s in sublist]

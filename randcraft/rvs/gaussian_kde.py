@@ -4,7 +4,6 @@ import numpy as np
 from scipy.stats import gaussian_kde
 
 from randcraft.models import ProbabilityDensityFunction, Statistics, Uncertainty, certainly
-from randcraft.rvs import RV
 from randcraft.rvs.base import CdfEstimator
 from randcraft.rvs.continuous import ContinuousRV
 from randcraft.rvs.discrete import DiscreteRV
@@ -56,5 +55,5 @@ class GaussianKdeRV(ContinuousRV):
     def copy(self) -> "GaussianKdeRV":
         return GaussianKdeRV(discrete=self._discrete, kde=self._kde)
 
-    def _get_all_rvs(self) -> list[RV]:
-        return [self] + self._discrete._get_all_rvs()
+    def _get_all_seeds(self) -> list[int | None]:
+        return [self._seed] + self._discrete._get_all_seeds()

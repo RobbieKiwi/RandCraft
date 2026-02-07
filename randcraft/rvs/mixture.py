@@ -134,6 +134,6 @@ class MixtureRV(RV):
     def copy(self) -> "MixtureRV":
         return MixtureRV(pdfs=self.pdfs, probabilities=self.probabilities)
 
-    def _get_all_rvs(self) -> list[RV]:
-        inner_rvs = [pdf._get_all_rvs() for pdf in self.pdfs]
-        return [self] + [rv for sublist in inner_rvs for rv in sublist]
+    def _get_all_seeds(self) -> list[int | None]:
+        inner_seeds = [pdf._get_all_seeds() for pdf in self.pdfs]
+        return [self._seed] + [s for sublist in inner_seeds for s in sublist]

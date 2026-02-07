@@ -87,12 +87,11 @@ class RV(ABC):
 
     @cached_property
     def seeded(self) -> bool:
-        return not any(rv._seed is None for rv in self._get_all_rvs())
+        return not any(seed is None for seed in self._get_all_seeds())
 
-    def _get_all_rvs(self) -> list["RV"]:
-        # Return a list of all random variables that actually contain the random logic (including self or inner RVs)
-        # Does not include wrapper RVs that just apply algebraic functions or similar transformations
-        return [self]
+    def _get_all_seeds(self) -> list[int | None]:
+        # Return a list of all random seeds
+        return [self._seed]
 
     def plot(self, kind: PdfPlotType = "both") -> None:
         start, end = self._get_plot_range()

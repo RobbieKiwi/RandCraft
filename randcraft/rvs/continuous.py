@@ -82,5 +82,5 @@ class ScaledRV(ContinuousRV):  # TODO Add checks to cdf and ppf stuff
     def copy(self) -> "ScaledRV":
         return ScaledRV(inner=self.inner.copy(), algebraic_function=self.algebraic_function)
 
-    def _get_all_rvs(self) -> list["RV"]:
-        return self.inner._get_all_rvs()
+    def _get_all_seeds(self) -> list[int | None]:
+        return self.inner._get_all_seeds()
