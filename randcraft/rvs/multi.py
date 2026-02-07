@@ -11,15 +11,12 @@ from randcraft.utils.fft_convolve import fftconvolve
 
 
 class MultiRV(ContinuousRV):
-    def __init__(
-        self,
-        continuous_pdfs: list[ContinuousRV],
-        discrete_pdf: DiscreteRV = DiracDeltaRV(value=0.0),
-    ) -> None:
+    def __init__(self, continuous_pdfs: list[ContinuousRV], discrete_pdf: DiscreteRV = DiracDeltaRV(value=0.0)) -> None:
         assert len(continuous_pdfs) > 0, "At least one continuous pdf is required"
         assert isinstance(discrete_pdf, DiscreteRV), f"discrete_pdf must be a {DiscreteRV.__name__}, got {type(discrete_pdf)}"
         self._continuous_pdfs = continuous_pdfs
         self._discrete_pdf = discrete_pdf
+        super().__init__()
 
     @property
     def short_name(self) -> str:
@@ -148,3 +145,7 @@ class MultiRV(ContinuousRV):
 
     def copy(self) -> "MultiRV":
         return MultiRV(continuous_pdfs=self.continuous_pdfs, discrete_pdf=self.discrete_pdf)
+
+    def _get_all_seeds(self) -> list[int | None]:
+        inner_seeds = [pdf._get_all_seeds() for pdf in self.pdfs]
+        return [s for sublist in inner_seeds for s in sublist]

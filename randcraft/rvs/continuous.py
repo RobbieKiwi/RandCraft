@@ -39,6 +39,7 @@ class ScaledRV(ContinuousRV):  # TODO Add checks to cdf and ppf stuff
         self._inner = inner
         self._af = algebraic_function
         assert self.algebraic_function.scale != 0.0, "Scale cannot be zero"
+        super().__init__(seed=None)
 
     @property
     def inner(self) -> ContinuousRV:
@@ -80,3 +81,6 @@ class ScaledRV(ContinuousRV):  # TODO Add checks to cdf and ppf stuff
 
     def copy(self) -> "ScaledRV":
         return ScaledRV(inner=self.inner.copy(), algebraic_function=self.algebraic_function)
+
+    def _get_all_seeds(self) -> list[int | None]:
+        return self.inner._get_all_seeds()

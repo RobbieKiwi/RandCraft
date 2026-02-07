@@ -10,9 +10,10 @@ from randcraft.rvs.discrete import DiscreteRV
 
 
 class GaussianKdeRV(ContinuousRV):
-    def __init__(self, discrete: DiscreteRV, kde: gaussian_kde) -> None:
+    def __init__(self, discrete: DiscreteRV, kde: gaussian_kde, seed: int | None = None) -> None:
         self._discrete = discrete
         self._kde = kde
+        super().__init__(seed=seed)
 
     @property
     def short_name(self) -> str:
@@ -34,13 +35,13 @@ class GaussianKdeRV(ContinuousRV):
             support=(min_value, max_value),
         )
 
-    def calculate_pdf(self, x: np.ndarray) -> ProbabilityDensityFunction:
-        y = self._kde.evaluate(x)
-        return ProbabilityDensityFunction(x=x, y=y)
-
     @cached_property
     def _cdf_estimator(self) -> CdfEstimator:
         return CdfEstimator(rv=self)
+
+    def calculate_pdf(self, x: np.ndarray) -> ProbabilityDensityFunction:
+        y = self._kde.evaluate(x)
+        return ProbabilityDensityFunction(x=x, y=y)
 
     def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
         return self._cdf_estimator.cdf(x)
@@ -49,7 +50,10 @@ class GaussianKdeRV(ContinuousRV):
         return self._cdf_estimator.ppf(x)
 
     def sample_numpy(self, n: int) -> np.ndarray:
-        return self._kde.resample(n)[0]
+        return self._kde.resample(size=n, seed=self._rng)[0]
 
     def copy(self) -> "GaussianKdeRV":
         return GaussianKdeRV(discrete=self._discrete, kde=self._kde)
+
+    def _get_all_seeds(self) -> list[int | None]:
+        return [self._seed] + self._discrete._get_all_seeds()

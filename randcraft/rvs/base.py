@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from functools import cached_property
 from typing import Literal, Self, TypeVar
 
 import matplotlib.pyplot as plt
@@ -12,6 +13,9 @@ type PdfPlotType = Literal["pdf", "cdf", "both"]
 
 
 class RV(ABC):
+    def __init__(self, seed: int | None = None) -> None:
+        self._seed = seed
+
     @property
     @abstractmethod
     def short_name(self) -> str: ...
@@ -48,7 +52,11 @@ class RV(ABC):
     def copy(self) -> Self: ...
 
     def __str__(self) -> str:
-        return f"<{self.__class__.__name__}(mean={self.mean}, variance={self.variance})>"
+        info = {"mean": self.mean, "variance": self.variance}
+        info_text = ", ".join(f"{k}={v}" for k, v in info.items())
+        if self.seeded:
+            info_text += ", seeded"
+        return f"<{self.__class__.__name__}({info_text})>"
 
     def __repr__(self) -> str:
         return str(self)
@@ -76,6 +84,14 @@ class RV(ABC):
     @property
     def max_value(self) -> float:
         return self.stats.max_value.value
+
+    @cached_property
+    def seeded(self) -> bool:
+        return not any(seed is None for seed in self._get_all_seeds())
+
+    def _get_all_seeds(self) -> list[int | None]:
+        # Return a list of all random seeds
+        return [self._seed]
 
     def plot(self, kind: PdfPlotType = "both") -> None:
         start, end = self._get_plot_range()
@@ -155,6 +171,10 @@ class RV(ABC):
     def plot_cdf_on_axis(self, ax: Axes, x: np.ndarray) -> None:
         y = self.cdf(x).value
         ax.plot(x, y)
+
+    @cached_property
+    def _rng(self) -> np.random.Generator:
+        return np.random.default_rng(self._seed)
 
 
 T_RV = TypeVar("T_RV", bound=RV)

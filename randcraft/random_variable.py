@@ -24,7 +24,10 @@ class RandomVariable:
         mean = float(np.format_float_positional(x=self.statistics.mean.value, precision=3, fractional=False))
         var = float(np.format_float_positional(x=self.statistics.variance.value, precision=3, fractional=False))
         name = self._rv.short_name
-        return f"<{self.__class__.__name__}({name}): {mean=}, {var=}>"
+        info = f"{mean=}, {var=}"
+        if self.seeded:
+            info += ", seeded"
+        return f"<{self.__class__.__name__}({name}): {info}>"
 
     def __repr__(self) -> str:
         return str(self)
@@ -50,6 +53,12 @@ class RandomVariable:
 
     def __truediv__(self, other: float) -> "RandomVariable":
         return self.scale(1 / float(other))
+
+    @property
+    def seeded(self) -> bool:
+        # Returns true if all random generators are initialized with a fixed seed
+        # If true, then this random variable will produce the same samples across runs
+        return self._rv.seeded
 
     @property
     def statistics(self) -> Statistics:
