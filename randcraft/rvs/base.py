@@ -5,10 +5,8 @@ from typing import Literal, Self, TypeVar
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
-from rich.cells import cached_cell_len
 from scipy.integrate import cumulative_trapezoid
 
-import randcraft.rvs
 from randcraft.models import ProbabilityDensityFunction, ProbabilityMassFunction, Statistics, Uncertainty, maybe
 
 type PdfPlotType = Literal["pdf", "cdf", "both"]
@@ -87,7 +85,7 @@ class RV(ABC):
     def max_value(self) -> float:
         return self.stats.max_value.value
 
-    @property
+    @cached_property
     def seeded(self) -> bool:
         return not any(rv._seed is None for rv in self._get_all_rvs())
 
