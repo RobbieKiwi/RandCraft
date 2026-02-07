@@ -16,7 +16,8 @@
         "editor.codeActionsOnSave": {
             "source.organizeImports": "always",
             "source.sortImports": "always",
-            "source.unusedImports": "always"
+            "source.unusedImports": "always",
+            "source.fixAll": "always"
         }
     },
     "autoDocstring.generateDocstringOnEnter": true,

@@ -4,6 +4,7 @@ from functools import cached_property
 import numpy as np
 
 from randcraft.models import ProbabilityDensityFunction, Statistics, Uncertainty, sum_uncertain_floats
+from randcraft.rvs import RV
 from randcraft.rvs.base import CdfEstimator
 from randcraft.rvs.continuous import ContinuousRV
 from randcraft.rvs.discrete import DiracDeltaRV, DiscreteRV
@@ -11,15 +12,12 @@ from randcraft.utils.fft_convolve import fftconvolve
 
 
 class MultiRV(ContinuousRV):
-    def __init__(
-        self,
-        continuous_pdfs: list[ContinuousRV],
-        discrete_pdf: DiscreteRV = DiracDeltaRV(value=0.0),
-    ) -> None:
+    def __init__(self, continuous_pdfs: list[ContinuousRV], discrete_pdf: DiscreteRV = DiracDeltaRV(value=0.0)) -> None:
         assert len(continuous_pdfs) > 0, "At least one continuous pdf is required"
         assert isinstance(discrete_pdf, DiscreteRV), f"discrete_pdf must be a {DiscreteRV.__name__}, got {type(discrete_pdf)}"
         self._continuous_pdfs = continuous_pdfs
         self._discrete_pdf = discrete_pdf
+        super().__init__()
 
     @property
     def short_name(self) -> str:
@@ -148,3 +146,7 @@ class MultiRV(ContinuousRV):
 
     def copy(self) -> "MultiRV":
         return MultiRV(continuous_pdfs=self.continuous_pdfs, discrete_pdf=self.discrete_pdf)
+
+    def _get_all_rvs(self) -> list[RV]:
+        inner_rvs = [pdf._get_all_rvs() for pdf in self.pdfs]
+        return [rv for sublist in inner_rvs for rv in sublist]

@@ -24,7 +24,11 @@ class RandomVariable:
         mean = float(np.format_float_positional(x=self.statistics.mean.value, precision=3, fractional=False))
         var = float(np.format_float_positional(x=self.statistics.variance.value, precision=3, fractional=False))
         name = self._rv.short_name
-        return f"<{self.__class__.__name__}({name}): {mean=}, {var=}>"
+        seeded = self._rv.seeded
+        info = f"{mean=}, {var=}"
+        if seeded:
+            info += ", seeded"
+        return f"<{self.__class__.__name__}({name}): {info}>"
 
     def __repr__(self) -> str:
         return str(self)

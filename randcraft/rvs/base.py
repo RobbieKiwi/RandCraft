@@ -1,17 +1,23 @@
 from abc import ABC, abstractmethod
+from functools import cached_property
 from typing import Literal, Self, TypeVar
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
+from rich.cells import cached_cell_len
 from scipy.integrate import cumulative_trapezoid
 
+import randcraft.rvs
 from randcraft.models import ProbabilityDensityFunction, ProbabilityMassFunction, Statistics, Uncertainty, maybe
 
 type PdfPlotType = Literal["pdf", "cdf", "both"]
 
 
 class RV(ABC):
+    def __init__(self, seed: int | None = None) -> None:
+        self._seed = seed
+
     @property
     @abstractmethod
     def short_name(self) -> str: ...
@@ -48,7 +54,11 @@ class RV(ABC):
     def copy(self) -> Self: ...
 
     def __str__(self) -> str:
-        return f"<{self.__class__.__name__}(mean={self.mean}, variance={self.variance})>"
+        info = {"mean": self.mean, "variance": self.variance}
+        info_text = ", ".join(f"{k}={v}" for k, v in info.items())
+        if self.seeded:
+            info_text += ", seeded"
+        return f"<{self.__class__.__name__}({info_text})>"
 
     def __repr__(self) -> str:
         return str(self)
@@ -76,6 +86,15 @@ class RV(ABC):
     @property
     def max_value(self) -> float:
         return self.stats.max_value.value
+
+    @property
+    def seeded(self) -> bool:
+        return not any(rv._seed is None for rv in self._get_all_rvs())
+
+    def _get_all_rvs(self) -> list["RV"]:
+        # Return a list of all random variables that actually contain the random logic (including self or inner RVs)
+        # Does not include wrapper RVs that just apply algebraic functions or similar transformations
+        return [self]
 
     def plot(self, kind: PdfPlotType = "both") -> None:
         start, end = self._get_plot_range()
@@ -155,6 +174,10 @@ class RV(ABC):
     def plot_cdf_on_axis(self, ax: Axes, x: np.ndarray) -> None:
         y = self.cdf(x).value
         ax.plot(x, y)
+
+    @cached_property
+    def _rng(self) -> np.random.Generator:
+        return np.random.default_rng(self._seed)
 
 
 T_RV = TypeVar("T_RV", bound=RV)

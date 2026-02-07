@@ -7,7 +7,7 @@ from randcraft.rvs.base import RV
 
 
 class DiscreteRV(RV):
-    def __init__(self, values: list[float], probabilities: list[float] | None = None) -> None:
+    def __init__(self, values: list[float], probabilities: list[float] | None = None, seed: int | None = None) -> None:
         if probabilities is None:
             probabilities = [1.0 / len(values)] * len(values)
         assert len(values) == len(probabilities), "Values and probabilities must have the same length."
@@ -17,6 +17,7 @@ class DiscreteRV(RV):
 
         self._values = np.array(values)
         self._probabilities = np.array(probabilities)
+        super().__init__(seed=seed)
 
     @property
     def short_name(self) -> str:
@@ -67,8 +68,7 @@ class DiscreteRV(RV):
         return DiscreteRV(values=[float(v + x) for v in self._values], probabilities=self._probabilities.tolist())
 
     def sample_numpy(self, n: int) -> np.ndarray:
-        rng = np.random.default_rng()
-        return rng.choice(self._values, size=n, p=self._probabilities)
+        return self._rng.choice(self._values, size=n, p=self._probabilities)
 
     def copy(self) -> "DiscreteRV":
         return DiscreteRV(values=self.values, probabilities=self.probabilities)

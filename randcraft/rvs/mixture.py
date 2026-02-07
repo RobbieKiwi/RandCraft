@@ -14,6 +14,7 @@ class MixtureRV(RV):
         self,
         pdfs: Sequence[ContinuousRV | DiscreteRV],
         probabilities: list[float] | None = None,
+        seed: int | None = None,
     ) -> None:
         # TODO Add support for mixture of mixtures by flattening the input
         if probabilities is None:
@@ -21,6 +22,7 @@ class MixtureRV(RV):
         self._pdfs = pdfs
         self._probabilities = probabilities
         self._validate()
+        super().__init__(seed=seed)
 
     def _validate(self) -> None:
         pdfs = self._pdfs
@@ -70,7 +72,7 @@ class MixtureRV(RV):
         return MixtureRV(pdfs=[pdf.add_constant(x) for pdf in self.pdfs], probabilities=self.probabilities)
 
     def sample_numpy(self, n: int) -> np.ndarray:
-        rng = np.random.default_rng()
+        rng = self._rng
         pdf_choices = rng.choice(len(self.pdfs), size=n, p=self.probabilities)
 
         samples = np.zeros(n)
@@ -131,3 +133,7 @@ class MixtureRV(RV):
 
     def copy(self) -> "MixtureRV":
         return MixtureRV(pdfs=self.pdfs, probabilities=self.probabilities)
+
+    def _get_all_rvs(self) -> list[RV]:
+        inner_rvs = [pdf._get_all_rvs() for pdf in self.pdfs]
+        return [self] + [rv for sublist in inner_rvs for rv in sublist]

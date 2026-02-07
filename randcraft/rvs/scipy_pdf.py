@@ -13,11 +13,13 @@ class RescalingError(Exception):
 
 class SciRV(ContinuousRV):
     def __init__(self, scipy_rv_type: rv_continuous, *args, **kwargs) -> None:
-        # It really should be continuous, but the typing here helps to interface with strange scipy typing
+        seed = kwargs.pop("seed", None)
         scipy_rv = scipy_rv_type(*args, **kwargs)
         assert isinstance(scipy_rv, rv_continuous_frozen)
         self._scipy_rv_type = scipy_rv_type
         self._scipy_rv = scipy_rv
+        super().__init__(seed=seed)
+        self._scipy_rv.random_state = self._rng
 
     @cached_property
     def short_name(self) -> str:

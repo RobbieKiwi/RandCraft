@@ -14,9 +14,6 @@ class SupportsFloatMul(Protocol):
     def __rmul__(self: T, x: float, /) -> T: ...
 
 
-T_SFM = TypeVar("T_SFM", bound=SupportsFloatMul)
-
-
 @dataclass(frozen=True)
 class Uncertainty[T]:
     value: T
