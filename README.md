@@ -24,11 +24,14 @@ combined.plot()
 
 ## Features
 
-- **Object-oriented random variables:** Wrap and combine distributions as Python objects.
-- **Distribution composition:** Add, multiply, and transform random variables.
-- **Sampling and statistics:** Easily sample from composed distributions and compute statistics.
+- **Distribution composition:** Scale random variables and add them together `rvc = rva/2 + rvb`
+- **Plot distributions** Quickly have a look at the distribution of any RV (including combinations etc) with `rv.plot()`
+- **Object-oriented:** RVs are objects, useful stats like mean/variance etc can be accessed with dot notation
+- **Sampling and statistics:** Easily sample from composed distributions and access computed statistics
 - **Extensible:** Supports custom distributions via subclassing.
+- **Nonparametric distributions** You can pass a sampling function to define your RV, or use KDE estimation on samples
 - **Integration with scipy.stats:** Use any frozen continuous distribution from scipy stats
+- **Deterministic** Pass a seed to any random variable during init to guarantee reproducible results
 
 ## Supported Distributions
 
@@ -49,7 +52,10 @@ You can also extend RandCraft with your own custom distributions.
 ## Installation
 
 ```bash
+# pip
 pip install randcraft
+# uv
+uv add randcraft
 ```
 
 ## API Overview
@@ -120,7 +126,6 @@ rv_sample_mean.plot()
 
 
 ### Mixing continuous and discrete variables
-You have observations of two independent random variables. You want to use kernal density estimation to create continuous random variables for each and then add them together.
 ```python
 from randcraft.constructors import make_normal, make_uniform, make_discrete
 from randcraft.misc import mix_rvs
@@ -140,6 +145,19 @@ mixed = mix_rvs([rv1, rv2, combined, discrete])
 mixed.plot()
 ```
 ![Mixture](https://github.com/RobbieKiwi/RandCraft/blob/f701111797b1904901bbf6fe9a62620327d5ebcf/images/mixture.png?raw=true)
+
+### Seed RVs for deterministic behaviour
+```python
+from randcraft.constructors import make_normal
+import numpy as np
+
+rv1 = make_normal(mean=0.0, std_dev=1.0, seed=3)
+# <RandomVariable(scipy-norm): mean=0.0, var=1.0, seeded>
+rv2 = make_normal(mean=0.0, std_dev=1.0, seed=3)
+# <RandomVariable(scipy-norm): mean=0.0, var=1.0, seeded>
+np.array_equal(rv2a.sample_numpy(10), rv2b.sample_numpy(10))
+# True
+```
 
 ## Extending RandCraft
 
