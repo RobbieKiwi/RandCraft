@@ -126,8 +126,8 @@ class MultiRV(ContinuousRV):
     def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
         return self._cdf_estimator.cdf(x)
 
-    def ppf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
-        return self._cdf_estimator.ppf(x)
+    def ppf(self, q: np.ndarray) -> Uncertainty[np.ndarray]:
+        return self._cdf_estimator.ppf(q)
 
     def scale(self, x: float) -> "MultiRV":
         x = float(x)
@@ -140,8 +140,8 @@ class MultiRV(ContinuousRV):
         discrete_pdf = self.discrete_pdf.add_constant(x)
         return MultiRV(continuous_pdfs=self.continuous_pdfs, discrete_pdf=discrete_pdf)
 
-    def sample_numpy(self, n: int) -> np.ndarray:
-        return sum([pdf.sample_numpy(n) for pdf in self.pdfs])  # type: ignore
+    def sample_numpy(self, n: int, forked: bool = False) -> np.ndarray:
+        return sum([pdf.sample_numpy(n, forked=forked) for pdf in self.pdfs])  # type: ignore
 
     def copy(self) -> "MultiRV":
         return MultiRV(continuous_pdfs=self.continuous_pdfs, discrete_pdf=self.discrete_pdf)

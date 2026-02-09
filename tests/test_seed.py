@@ -49,3 +49,17 @@ class TestSeed(BaseTestCase):
 
         self.assertTrue(mixed._rv.seeded)
         self.assertTrue(np.array_equal(mixed.sample_numpy(10), mixedb.sample_numpy(10)))
+
+    def test_fork(self) -> None:
+        rva = make_normal(mean=1.0, std_dev=1.0, seed=2)
+        rvb = make_normal(mean=1.0, std_dev=1.0, seed=2)
+        rva._sample_forked(3)
+
+        result_a = rva.sample_numpy(10)
+        result_b = rvb.sample_numpy(10)
+        self.assertTrue(np.array_equal(result_a, result_b))
+
+        rva.sample_one()
+        result_a = rva.sample_numpy(10)
+        result_b = rvb.sample_numpy(10)
+        self.assertFalse(np.array_equal(result_a, result_b))

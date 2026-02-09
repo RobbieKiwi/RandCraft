@@ -9,6 +9,9 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 
+type Sampler = Callable[[int], np.ndarray]
+
+
 class SupportsFloatMul(Protocol):
     def __mul__(self: T, x: float, /) -> T: ...
     def __rmul__(self: T, x: float, /) -> T: ...

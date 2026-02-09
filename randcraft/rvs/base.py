@@ -25,7 +25,7 @@ class RV(ABC):
     def statistics(self) -> Statistics: ...
 
     @abstractmethod
-    def sample_numpy(self, n: int) -> np.ndarray: ...
+    def sample_numpy(self, n: int, forked: bool = False) -> np.ndarray: ...
 
     @abstractmethod
     def scale(self, x: float) -> "RV": ...
@@ -174,6 +174,10 @@ class RV(ABC):
 
     @cached_property
     def _rng(self) -> np.random.Generator:
+        return np.random.default_rng(self._seed)
+
+    @cached_property
+    def _fork_rng(self) -> np.random.Generator:
         return np.random.default_rng(self._seed)
 
 

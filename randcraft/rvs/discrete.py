@@ -67,8 +67,9 @@ class DiscreteRV(RV):
         x = float(x)
         return DiscreteRV(values=[float(v + x) for v in self._values], probabilities=self._probabilities.tolist())
 
-    def sample_numpy(self, n: int) -> np.ndarray:
-        return self._rng.choice(self._values, size=n, p=self._probabilities)
+    def sample_numpy(self, n: int, forked: bool = False) -> np.ndarray:
+        rng = self._fork_rng if forked else self._rng
+        return rng.choice(self._values, size=n, p=self._probabilities)
 
     def copy(self) -> "DiscreteRV":
         return DiscreteRV(values=self.values, probabilities=self.probabilities)
@@ -107,7 +108,7 @@ class DiracDeltaRV(DiscreteRV):
     def add_constant(self, x: float) -> DiscreteRV:
         return DiracDeltaRV(value=self.mean + x)
 
-    def sample_numpy(self, n: int) -> np.ndarray:
+    def sample_numpy(self, n: int, forked: bool = False) -> np.ndarray:
         return np.ones(n) * self.value
 
     def copy(self) -> "DiracDeltaRV":

@@ -17,7 +17,12 @@ class SciRV(ContinuousRV):
         scipy_rv = scipy_rv_type(*args, **kwargs)
         assert isinstance(scipy_rv, rv_continuous_frozen)
         self._scipy_rv_type = scipy_rv_type
+
         self._scipy_rv = scipy_rv
+        if seed is None:
+            self._forked_rv = self._scipy_rv
+        else:
+            self._forked_rv = scipy_rv_type(*args, **kwargs)
         super().__init__(seed=seed)
         self._scipy_rv.random_state = self._rng
 
@@ -89,7 +94,9 @@ class SciRV(ContinuousRV):
 
         raise RescalingError(f"Could not rescale the {self._scipy_rv_type} correctly.")
 
-    def sample_numpy(self, n: int) -> np.ndarray:
+    def sample_numpy(self, n: int, forked: bool = False) -> np.ndarray:
+        if forked:
+            return self._forked_rv.rvs(size=n)
         return self.scipy_rv.rvs(size=n)
 
     def calculate_pdf(self, x: np.ndarray) -> ProbabilityDensityFunction:
@@ -98,8 +105,8 @@ class SciRV(ContinuousRV):
     def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
         return certainly(self.scipy_rv.cdf(x))
 
-    def ppf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
-        return certainly(self.scipy_rv.ppf(x))
+    def ppf(self, q: np.ndarray) -> Uncertainty[np.ndarray]:
+        return certainly(self.scipy_rv.ppf(q))
 
     def copy(self) -> "SciRV":
         return self.scale(1.0)  # type: ignore

@@ -71,8 +71,8 @@ class MixtureRV(RV):
     def add_constant(self, x: float) -> "MixtureRV":
         return MixtureRV(pdfs=[pdf.add_constant(x) for pdf in self.pdfs], probabilities=self.probabilities)
 
-    def sample_numpy(self, n: int) -> np.ndarray:
-        rng = self._rng
+    def sample_numpy(self, n: int, forked: bool = False) -> np.ndarray:
+        rng = self._fork_rng if forked else self._rng
         pdf_choices = rng.choice(len(self.pdfs), size=n, p=self.probabilities)
 
         samples = np.zeros(n)
@@ -81,7 +81,7 @@ class MixtureRV(RV):
             num_samples = np.sum(pdf_choices == i)
             if num_samples > 0:
                 # Draw samples from the PDF and add them to the result
-                samples[pdf_choices == i] = self.pdfs[i].sample_numpy(num_samples)
+                samples[pdf_choices == i] = self.pdfs[i].sample_numpy(n=num_samples, forked=forked)
         return samples
 
     @cached_property

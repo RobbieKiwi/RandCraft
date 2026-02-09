@@ -51,9 +51,7 @@ def reduce_observations(observations: np.ndarray, weights: np.ndarray | None = N
     assert observations.ndim == 1, "Input data must be a 1D numpy array"
     if weights is not None:
         unique, inverse = np.unique(observations, return_inverse=True)
-        summed_weights = np.zeros_like(unique, dtype=float)
-        for idx, w in zip(inverse, weights):
-            summed_weights[idx] += w
+        summed_weights = np.bincount(inverse, weights=weights)
         return unique, summed_weights
     else:
         unique = np.unique(observations)

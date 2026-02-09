@@ -120,5 +120,37 @@ class RandomVariable:
         new_rv = PdfConvolver.convolve_pdfs(pdfs=[self._rv] * n)  # type: ignore
         return RandomVariable(rv=new_rv)
 
+    def fork(self, seed: int | None = None) -> "RandomVariable":
+        """
+        Create a separate copy of this random variable with independent seeding.
+
+        Args:
+            seed: Optional seed for the forked random variable. If None, the forked RV will be unseeded.
+                  If the original RV is seeded and no seed is provided, a new seed is generated.
+
+        Returns:
+            A new RandomVariable that is a copy of this one but with independent random state.
+        """
+        # Create a copy of the underlying RV with the new seed
+        if seed is None and self.seeded:
+            # Generate a new seed based on the original one to maintain determinism
+            import hashlib
+
+            original_seed = self._rv._seed
+            new_seed_hash = hashlib.md5(str(original_seed).encode()).hexdigest()
+            seed = int(new_seed_hash, 16) % (2**31)  # Convert to 31-bit integer
+
+        # Copy the RV with the new seed
+        copied_rv = self._rv.copy()
+        if seed is not None:
+            # Set the seed on the copied RV
+            copied_rv._seed = seed
+
+        return RandomVariable(rv=copied_rv)
+
     def plot(self, kind: PdfPlotType = "both") -> None:
         self._rv.plot(kind=kind)
+
+    def _sample_forked(self, n: int) -> np.ndarray:
+        # Observe the random variable without changing it's state
+        return self._rv.sample_numpy(n=n, forked=True)
