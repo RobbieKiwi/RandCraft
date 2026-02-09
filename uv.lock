@@ -823,7 +823,7 @@ dev = [
 requires-dist = [
     { name = "matplotlib", specifier = ">=3.10.6" },
     { name = "numpy", specifier = ">=2.3.3" },
-    { name = "scipy", specifier = "==1.15.0" },
+    { name = "scipy", specifier = ">=1.15.0" },
 ]
 
 [package.metadata.requires-dev]
