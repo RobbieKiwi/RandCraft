@@ -79,7 +79,7 @@ three_dice.ppf(0.5)
 # 10.0
 ```
 
-### Using arbitrary parametric continuous distribution from scipy.stats
+### Using parametric continuous distribution from scipy.stats
 ```python
 from scipy.stats import uniform
 from randcraft.constructors import make_scipy
@@ -141,6 +141,21 @@ mixed = mix_rvs([rv1, rv2, combined, discrete])
 mixed.plot()
 ```
 ![Mixture](https://github.com/RobbieKiwi/RandCraft/blob/f701111797b1904901bbf6fe9a62620327d5ebcf/images/mixture.png?raw=true)
+
+## Applying arbitrary functions
+You can apply any function of the form (np.ndarray[float] -> np.ndarray[float]) to a random variable.
+Stats and plotting etc will be estimated numerically
+
+```python
+rv = make_coin_flip(seed=2)
+# <RandomVariable(discrete): mean=0.5, var=0.25>
+rv_2 = apply_func_to_discrete_rv(rv=rv, func=lambda x: x * 2 - 1)
+# <RandomVariable(anon): mean=0.0, var=1.66>
+rv_2.get_mean()
+# np.float64(0.0)
+values = rv_2.sample(5)
+# array([-1., -1.,  1., -1.,  1.])
+```
 
 ## Extending RandCraft
 

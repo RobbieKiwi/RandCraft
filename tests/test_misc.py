@@ -44,3 +44,9 @@ class TestMisc(BaseTestCase):
 
         rv2a = apply_func_to_discrete_rv(rv=rva, func=double)
         self.assertTrue(np.array_equal(rv0.sample(10) * 2, rv2a.sample(10)))
+
+    def test_apply_discrete_comples(self) -> None:
+        rv = make_coin_flip(seed=2)
+        rv_2 = apply_func_to_discrete_rv(rv=rv, func=lambda x: x * 2 - 1)
+        values = rv_2.sample(10)
+        self.assertSetEqual({-1, 1}, set(values.tolist()))
