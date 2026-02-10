@@ -1,4 +1,4 @@
-from typing import TypeVar, Union, overload
+from typing import Union, overload
 
 import numpy as np
 
@@ -11,8 +11,6 @@ from randcraft.rvs import (
 from randcraft.rvs.base import PdfPlotType
 
 __all__ = ["RandomVariable"]
-
-T = TypeVar("T")
 
 
 class RandomVariable:

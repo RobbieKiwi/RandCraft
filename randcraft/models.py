@@ -1,18 +1,14 @@
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Literal, Protocol, TypeVar, runtime_checkable
+from typing import Literal, Protocol, runtime_checkable
 
 import numpy as np
-
-T = TypeVar("T")
-U = TypeVar("U")
-
 
 type Sampler = Callable[[int], np.ndarray]
 
 
-class SupportsFloatMul(Protocol):
+class SupportsFloatMul[T](Protocol):
     def __mul__(self: T, x: float, /) -> T: ...
     def __rmul__(self: T, x: float, /) -> T: ...
 
@@ -34,17 +30,17 @@ class Uncertainty[T]:
         return str(self)
 
     def __mul__(self, other: "Uncertainty[T]" | T | float | int) -> "Uncertainty[T]":
-        return self._combine(other=other, func=lambda x, y: x * y)  # type: ignore
+        return self._combine(other=other, func=lambda x, y: x * y)
 
     def __add__(self, other: "Uncertainty[T]" | T | float | int) -> "Uncertainty[T]":
-        return self._combine(other=other, func=lambda x, y: x + y)  # type: ignore
+        return self._combine(other=other, func=lambda x, y: x + y)
 
     def __sub__(self, other: "Uncertainty[T]" | T | float | int) -> "Uncertainty[T]":
-        return self._combine(other=other, func=lambda x, y: x - y)  # type: ignore
+        return self._combine(other=other, func=lambda x, y: x - y)
 
     def __pow__(self, other: int | float) -> "Uncertainty[T]":
         assert not isinstance(other, Uncertainty), "Exponentiation with uncertain exponent is not supported"
-        return self.apply(func=lambda x: x**other)  # type: ignore
+        return self.apply(func=lambda x: x**other)
 
     def apply(self, func: Callable[[T], T]) -> "Uncertainty[T]":
         return Uncertainty(value=func(self.value), is_certain=self.is_certain)
@@ -84,7 +80,7 @@ def sum_uncertain_floats(uncertainties: Iterable[Uncertainty[float]]) -> Uncerta
     return sum(values, certainly(0.0))
 
 
-def join_uncertainties(uncertainties: Iterable[Uncertainty[T]], func: Callable[[Iterable[T]], U]) -> Uncertainty[U]:
+def join_uncertainties[T, U](uncertainties: Iterable[Uncertainty[T]], func: Callable[[Iterable[T]], U]) -> Uncertainty[U]:
     is_certain = all(u.is_certain for u in uncertainties)
     values = [u.value for u in uncertainties]
     return Uncertainty(value=func(values), is_certain=is_certain)
@@ -175,7 +171,7 @@ class Statistics:
 
 
 @runtime_checkable
-class SupportsFloatAlgebra(Protocol):
+class SupportsFloatAlgebra[T](Protocol):
     def __add__(self: T, x: float, /) -> T: ...
     def __radd__(self: T, x: float, /) -> T: ...
     def __sub__(self: T, x: float, /) -> T: ...
@@ -183,9 +179,6 @@ class SupportsFloatAlgebra(Protocol):
     def __mul__(self: T, x: float, /) -> T: ...
     def __rmul__(self: T, x: float, /) -> T: ...
     def __truediv__(self: T, x: float, /) -> T: ...
-
-
-F = TypeVar("F", bound=SupportsFloatAlgebra)
 
 
 @dataclass(frozen=True)
@@ -215,12 +208,12 @@ class AlgebraicFunction:
     def __radd__(self, addend: float) -> "AlgebraicFunction":
         return self.__add__(addend)
 
-    def apply(self, x: F) -> F:
+    def apply[F: SupportsFloatAlgebra](self, x: F) -> F:
         if self.is_identity:
             return x
         return self.scale * x + self.offset
 
-    def apply_inverse(self, y: F) -> F:
+    def apply_inverse[F: SupportsFloatAlgebra](self, y: F) -> F:
         if self.is_identity:
             return y
         return (y - self.offset) / self.scale
