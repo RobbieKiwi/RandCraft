@@ -69,7 +69,7 @@ class SciRV(ContinuousRV):
             shape_kwargs = {k: v for k, v in self._scipy_rv.kwds.items()}
             shape_kwargs["loc"] = 0.0
             shape_kwargs["scale"] = 1.0
-            unit_distribution = self._scipy_rv_type(*shape_args, **shape_kwargs)  # type: ignore
+            unit_distribution = self._scipy_rv_type(*shape_args, **shape_kwargs)
             current_scale = self.std_dev / unit_distribution.std()
             current_loc = self.mean - unit_distribution.mean() * current_scale
             new_loc = af.apply(current_loc)

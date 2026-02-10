@@ -34,7 +34,7 @@ class ContinuousRV(RV, ABC):
         return ScaledRV(inner=self.copy(), algebraic_function=AlgebraicFunction(offset=x))
 
 
-class ScaledRV(ContinuousRV):  # TODO Add checks to cdf and ppf stuff
+class ScaledRV(ContinuousRV):
     def __init__(self, inner: ContinuousRV, algebraic_function: AlgebraicFunction) -> None:
         self._inner = inner
         self._af = algebraic_function
@@ -74,7 +74,7 @@ class ScaledRV(ContinuousRV):  # TODO Add checks to cdf and ppf stuff
         return ScaledRV(inner=self.inner, algebraic_function=self.algebraic_function + x)
 
     def sample_numpy(self, n: int, forked: bool = False) -> np.ndarray:
-        return self.algebraic_function.apply(self.inner.sample_numpy(n=n, forked=forked))
+        return self.algebraic_function(self.inner.sample_numpy(n=n, forked=forked))
 
     def _get_plot_range(self) -> tuple[float, float]:
         return self.algebraic_function.apply_on_range(self.inner._get_plot_range())

@@ -55,8 +55,8 @@ class Uncertainty[T]:
 
     def _combine(self, other: "Uncertainty[T]" | T, func: Callable[[T, T], T]) -> "Uncertainty[T]":
         if not isinstance(other, Uncertainty):
-            other = Uncertainty(value=other, is_certain=True)
-        return Uncertainty(value=func(self.value, other.value), is_certain=self.is_certain and other.is_certain)
+            other = Uncertainty(value=other, is_certain=True)  # type: ignore
+        return Uncertainty(value=func(self.value, other.value), is_certain=self.is_certain and other.is_certain)  # type: ignore
 
 
 def certainly[T](x: T) -> Uncertainty[T]:
@@ -156,13 +156,11 @@ class Statistics:
         return uncertainty.get(name=name, certain=certain)
 
     def apply_algebraic_function(self, af: "AlgebraicFunction") -> "Statistics":
-        scale = af.scale
-        offset = af.offset
-        new_min_max = (self.min_value * scale + offset, self.max_value * scale + offset)
+        new_min_max = (af(self.min_value), af(self.max_value))
         new_min, new_max = sort_uncertainties(new_min_max)
 
-        mean = self.mean * scale + offset
-        variance = self.variance * (scale**2)
+        mean = af(self.mean)
+        variance = self.variance * (af.scale**2)
         second_moment = variance + mean**2
         moments = [mean, second_moment]
         # TODO calculate higher order moments
@@ -171,13 +169,14 @@ class Statistics:
 
 
 @runtime_checkable
-class SupportsFloatAlgebra[T](Protocol):
+class SupportsForwardApply[T](Protocol):
     def __add__(self: T, x: float, /) -> T: ...
-    def __radd__(self: T, x: float, /) -> T: ...
-    def __sub__(self: T, x: float, /) -> T: ...
-    def __rsub__(self: T, x: float, /) -> T: ...
     def __mul__(self: T, x: float, /) -> T: ...
-    def __rmul__(self: T, x: float, /) -> T: ...
+
+
+@runtime_checkable
+class SupportsBackApply[T](Protocol):
+    def __sub__(self: T, x: float, /) -> T: ...
     def __truediv__(self: T, x: float, /) -> T: ...
 
 
@@ -208,12 +207,15 @@ class AlgebraicFunction:
     def __radd__(self, addend: float) -> "AlgebraicFunction":
         return self.__add__(addend)
 
-    def apply[F: SupportsFloatAlgebra](self, x: F) -> F:
+    def __call__[F: SupportsForwardApply](self, x: F) -> F:
+        return self.apply(x=x)
+
+    def apply[F: SupportsForwardApply](self, x: F) -> F:
         if self.is_identity:
             return x
         return self.scale * x + self.offset
 
-    def apply_inverse[F: SupportsFloatAlgebra](self, y: F) -> F:
+    def apply_inverse[F: SupportsBackApply](self, y: F) -> F:
         if self.is_identity:
             return y
         return (y - self.offset) / self.scale
