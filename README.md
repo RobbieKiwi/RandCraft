@@ -157,6 +157,9 @@ You can apply any function of the form (np.ndarray[float] -> np.ndarray[float]) 
 Stats and plotting etc will be estimated numerically
 
 ```python
+from randcraft import make_coin_flip
+from randcraft.misc import apply_func_to_discrete_rv
+
 rv = make_coin_flip()
 # <RandomVariable(discrete): mean=0.5, var=0.25>
 rv_2 = apply_func_to_discrete_rv(rv=rv, func=lambda x: x * 2 - 1)
