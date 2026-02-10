@@ -213,7 +213,7 @@ class AlgebraicFunction:
     def apply[F: SupportsForwardApply](self, x: F) -> F:
         if self.is_identity:
             return x
-        return self.scale * x + self.offset
+        return x * self.scale + self.offset
 
     def apply_inverse[F: SupportsBackApply](self, y: F) -> F:
         if self.is_identity:
