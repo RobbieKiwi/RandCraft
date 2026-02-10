@@ -23,29 +23,30 @@ combined.plot()
 ![Double normal](https://github.com/RobbieKiwi/RandCraft/blob/68607c6a4cefb97aa5c94614ed0ff05901e6a45a/images/double_normal.png?raw=true)
 
 ## Features
-
-- **Distribution composition:** Scale random variables and add them together `rvc = rva/2 + rvb`. Apply arbitrary functions.
+- **Object-oriented** RVs are objects, most things you need are properties or methods on the object instance
+- **Distribution composition:** Scale random variables and add them together `rvc = rva/2 + rvb`. Apply arbitrary functions
 - **Plot distributions** Quickly have a look at the distribution of any RV (including combinations etc) with `rv.plot()`
-- **Object-oriented:** RVs are objects, useful stats like mean/variance etc can be accessed with dot notation
-- **Sampling and statistics:** Easily sample from composed distributions and access computed statistics
-- **Extensible:** Supports custom distributions via subclassing.
-- **Nonparametric distributions** You can pass a sampling function to define your RV, or use KDE estimation on samples
+- **Sampling and statistics:** Easily sample from composed distributions and access statistics
+- **Distribution estimation** Use KDE estimation on samples to create a distribution
 - **Integration with scipy.stats:** Use any frozen continuous distribution from scipy stats
 - **Deterministic** Pass a seed to any random variable during init to guarantee reproducible results
+- **Extensible:** Supports custom distributions via subclassing.
 
 ## Supported Distributions
-
-RandCraft currently supports the following distributions:
-
+Parametric
 - Normal, Uniform, Beta, Gamma, Lognormal + any other parametric continuous distribution from scipy.stats
 - Discrete
 - DiracDelta
-- Gaussian kde distribution from provided observations
-- Mixture distributions
-- Anonymous distribution functions based on a provided sampler function
 
-Distributions can all be combined arbitrarily with addition and subtraction.
-The library will simplify the new distribution analytically where possible, and use numerical approaches otherwise.
+Non-parametric
+- Gaussian kde distribution from provided observations
+- Distributions based on a provided sampler function
+
+Combinations
+- Mixture (Random choice between distributions)
+- Multi (Linear combination of distributions)
+
+When combining distributions, the library will simplify the new distribution analytically where possible, and use numerical approaches otherwise
 
 You can also extend RandCraft with your own custom distributions.
 
@@ -60,17 +61,21 @@ uv add randcraft
 
 ## API Overview
 
-- `make_normal`, `make_uniform` ...etc: Create a random variable
-- Addition subtraction with constants or other RVs: `+`, `-`
-- Division by constant to scale RV values
-- `.sample()`: Draw 1 sample (float)
-- `.sample(n)`: Draw n samples (np.ndarray)
-- `.get_mean()`, `.get_variance()`: Get statistics
-- `.cdf(x)`: Evaluate cdf at points
-- `.ppf(x)`: Evaluate inverse of cdf at points
-- `.plot()`: Take a look at your distribution
+- `make_normal()`, `make_uniform()` etc: Create a random variable
+- `(rva - rv2) + 3.0`: Addition and subtraction with constants or other RVs
+- `rv.scale(k)`: Scale the RV by a constant
+- `rv.multi_sample(n)`: Create a new RV representing n independent observations of the original RV
+- `rv * k`: ⚠️ Not allowed due to ambiguity between scale/multi_sample
+- `rv / k`: Scale the RV by a constant
+- `rv.sample()`: Draw 1 sample (float)
+- `rv.sample(n)`: Draw n samples (np.ndarray)
+- `rv.get_mean()`, `rv.get_variance()`: Get statistics (possibly estimated numerically)
+- `rv.get_mean(exact=True)`, `rv.get_variance(exact=True)`: (Only accept exact values)
+- `rv.cdf(x)`: Evaluate cdf at points
+- `rv.ppf(x)`: Evaluate inverse of cdf at points
+- `rv.plot()`: Take a look at your distribution
 
-## More Examples
+## Examples
 ### Combining dice rolls
 ```python
 from randcraft.constructors import make_die_roll
