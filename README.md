@@ -16,7 +16,7 @@ norm = make_normal(mean=0, std_dev=0.2)
 # <RandomVariable(normal): mean=0.0, var=0.04>
 combined = coin_flip + norm 
 # <RandomVariable(mixture): mean=0.5, var=0.29>
-combined.sample_one()
+combined.sample()
 # 0.8678903828104276
 combined.plot()
 ```
@@ -171,7 +171,7 @@ rv1 = make_normal(mean=0.0, std_dev=1.0, seed=3)
 # <RandomVariable(scipy-norm): mean=0.0, var=1.0, seeded>
 rv2 = make_normal(mean=0.0, std_dev=1.0, seed=3)
 # <RandomVariable(scipy-norm): mean=0.0, var=1.0, seeded>
-np.array_equal(rv2a.sample_numpy(10), rv2b.sample_numpy(10))
+np.array_equal(rv2a.sample(10), rv2b.sample(10))
 # True
 ```
 
