@@ -1,4 +1,4 @@
-from typing import TypeVar, Union, overload
+from typing import Union, overload
 
 import numpy as np
 
@@ -11,8 +11,6 @@ from randcraft.rvs import (
 from randcraft.rvs.base import PdfPlotType
 
 __all__ = ["RandomVariable"]
-
-T = TypeVar("T")
 
 
 class RandomVariable:
@@ -98,11 +96,16 @@ class RandomVariable:
             return self._rv.ppf(q=value).get(name="ppf", certain=exact)
         return self.ppf(value=np.array([value]))[0]
 
-    def sample_numpy(self, n: int) -> np.ndarray:
-        return self._rv.sample_numpy(n=n)
+    @overload
+    def sample(self, n: int) -> np.ndarray: ...
 
-    def sample_one(self) -> float:
-        return self.sample_numpy(1).tolist()[0]
+    @overload
+    def sample(self, n: None = None) -> float: ...
+
+    def sample(self, n: int | None = None) -> float | np.ndarray:
+        if n is None:
+            return self._rv.sample_numpy(n=1).item()
+        return self._rv.sample_numpy(n=n)
 
     def scale(self, factor: float) -> "RandomVariable":
         if factor == 0.0:
@@ -120,5 +123,40 @@ class RandomVariable:
         new_rv = PdfConvolver.convolve_pdfs(pdfs=[self._rv] * n)  # type: ignore
         return RandomVariable(rv=new_rv)
 
+    def fork(self, seed: int | None = None) -> "RandomVariable":
+        """
+        Create a separate copy of this random variable with independent seeding.
+
+        Args:
+            seed: Optional seed for the forked random variable. If None, the forked RV will be unseeded.
+                  If the original RV is seeded and no seed is provided, a new seed is generated.
+
+        Returns:
+            A new RandomVariable that is a copy of this one but with independent random state.
+        """
+        # Create a copy of the underlying RV with the new seed
+        if seed is None and self.seeded:
+            # Generate a new seed based on the original one to maintain determinism
+            import hashlib
+
+            original_seed = self._rv._seed
+            new_seed_hash = hashlib.md5(str(original_seed).encode()).hexdigest()
+            seed = int(new_seed_hash, 16) % (2**31)  # Convert to 31-bit integer
+
+        # Copy the RV with the new seed
+        copied_rv = self._rv.copy()
+        if seed is not None:
+            # Set the seed on the copied RV
+            copied_rv._seed = seed
+
+        return RandomVariable(rv=copied_rv)
+
     def plot(self, kind: PdfPlotType = "both") -> None:
         self._rv.plot(kind=kind)
+
+    def _sample_forked(self, n: int) -> np.ndarray:
+        # Observe the random variable without changing it's state
+        return self._rv.sample_numpy(n=n, forked=True)
+
+    sample_numpy = sample
+    sample_one = sample

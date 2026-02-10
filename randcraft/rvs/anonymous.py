@@ -1,9 +1,8 @@
 import logging
-from collections.abc import Callable
 
 import numpy as np
 
-from randcraft.models import ProbabilityDensityFunction, Statistics, Uncertainty
+from randcraft.models import ProbabilityDensityFunction, Sampler, Statistics, Uncertainty
 from randcraft.rvs.continuous import ContinuousRV
 
 logger = logging.getLogger(__name__)
@@ -12,10 +11,11 @@ logger = logging.getLogger(__name__)
 class AnonymousRV(ContinuousRV):
     def __init__(
         self,
-        sampler: Callable[[int], np.ndarray],  # Function used for sampling
-        ref_rv: ContinuousRV,  # Reference used for calculating statistics, pdf, cdf etc
+        sampler: Sampler,  # Function used for sampling
+        ref_rv: ContinuousRV,  # Reference used for calculating statistics, pdf, cdf etc and forked samples
         external_statistics: Statistics | None = None,  # Optionally override statistics
     ) -> None:
+        super().__init__(seed=None)
         self._sampler = sampler
         self._ref_rv = ref_rv
         self._statistics = (external_statistics or ref_rv.statistics).make_uncertain()
@@ -28,11 +28,13 @@ class AnonymousRV(ContinuousRV):
     def statistics(self) -> Statistics:
         return self._statistics
 
-    def sample_numpy(self, n: int) -> np.ndarray:
-        return self._ref_rv.sample_numpy(n)
+    def sample_numpy(self, n: int, forked: bool = False) -> np.ndarray:
+        if forked:
+            return self._ref_rv.sample_numpy(n=n, forked=True)
+        return self._sampler(n)
 
-    def ppf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
-        return self._ref_rv.ppf(x).make_uncertain()
+    def ppf(self, q: np.ndarray) -> Uncertainty[np.ndarray]:
+        return self._ref_rv.ppf(q).make_uncertain()
 
     def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
         return self._ref_rv.cdf(x).make_uncertain()

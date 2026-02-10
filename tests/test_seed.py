@@ -9,20 +9,20 @@ class TestSeed(BaseTestCase):
     def test_basic(self) -> None:
         rv1 = make_coin_flip(seed=2)
         rv2 = make_coin_flip(seed=2)
-        self.assertTrue(np.array_equal(rv1.sample_numpy(10), rv2.sample_numpy(10)))
+        self.assertTrue(np.array_equal(rv1.sample(10), rv2.sample(10)))
 
     def test_scipy(self) -> None:
         rv1 = make_normal(mean=0.0, std_dev=1.0, seed=3)
         rv2 = make_normal(mean=0.0, std_dev=1.0, seed=3)
 
-        r1 = rv1.sample_numpy(10)
-        r2 = rv2.sample_numpy(10)
+        r1 = rv1.sample(10)
+        r2 = rv2.sample(10)
         self.assertTrue(np.array_equal(r1, r2))
-        self.assertFalse(np.array_equal(rv1.sample_numpy(10), r1))
+        self.assertFalse(np.array_equal(rv1.sample(10), r1))
 
         rv3 = make_normal(mean=0.0, std_dev=1.0)
         rv4 = make_normal(mean=0.0, std_dev=1.0)
-        self.assertFalse(np.array_equal(rv3.sample_numpy(100), rv4.sample_numpy(100)))
+        self.assertFalse(np.array_equal(rv3.sample(100), rv4.sample(100)))
 
     def test_multi(self) -> None:
         rv1 = make_coin_flip(seed=2)
@@ -34,7 +34,7 @@ class TestSeed(BaseTestCase):
         rv3_no_seed = rv1 + rv2_no_seed
         self.assertTrue(rv3._rv.seeded)
         self.assertFalse(rv3_no_seed._rv.seeded)
-        self.assertTrue(np.array_equal(rv2a.sample_numpy(10), rv2b.sample_numpy(10)))
+        self.assertTrue(np.array_equal(rv2a.sample(10), rv2b.sample(10)))
 
     def test_mixture(self) -> None:
         rv1 = make_coin_flip(seed=2)
@@ -48,4 +48,18 @@ class TestSeed(BaseTestCase):
         mixedb = mix_rvs(rvs=[rv1b, rv2b, rv3b], seed=1)
 
         self.assertTrue(mixed._rv.seeded)
-        self.assertTrue(np.array_equal(mixed.sample_numpy(10), mixedb.sample_numpy(10)))
+        self.assertTrue(np.array_equal(mixed.sample(10), mixedb.sample(10)))
+
+    def test_fork(self) -> None:
+        rva = make_normal(mean=1.0, std_dev=1.0, seed=2)
+        rvb = make_normal(mean=1.0, std_dev=1.0, seed=2)
+        rva._sample_forked(3)
+
+        result_a = rva.sample(10)
+        result_b = rvb.sample(10)
+        self.assertTrue(np.array_equal(result_a, result_b))
+
+        rva.sample()
+        result_a = rva.sample(10)
+        result_b = rvb.sample(10)
+        self.assertFalse(np.array_equal(result_a, result_b))

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Literal, Self, TypeVar
+from typing import Literal, Self
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,7 +25,7 @@ class RV(ABC):
     def statistics(self) -> Statistics: ...
 
     @abstractmethod
-    def sample_numpy(self, n: int) -> np.ndarray: ...
+    def sample_numpy(self, n: int, forked: bool = False) -> np.ndarray: ...
 
     @abstractmethod
     def scale(self, x: float) -> "RV": ...
@@ -174,10 +174,13 @@ class RV(ABC):
 
     @cached_property
     def _rng(self) -> np.random.Generator:
+        # The basis random generator. This is used for getting repeatable results with seeeded rvs
         return np.random.default_rng(self._seed)
 
-
-T_RV = TypeVar("T_RV", bound=RV)
+    @cached_property
+    def _fork_rng(self) -> np.random.Generator:
+        # A second random generator (not seeded), used for any sampling needed for stats calculation or plotting etc
+        return np.random.default_rng()
 
 
 class CdfEstimator:

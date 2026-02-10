@@ -46,11 +46,12 @@ class GaussianKdeRV(ContinuousRV):
     def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
         return self._cdf_estimator.cdf(x)
 
-    def ppf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
-        return self._cdf_estimator.ppf(x)
+    def ppf(self, q: np.ndarray) -> Uncertainty[np.ndarray]:
+        return self._cdf_estimator.ppf(q)
 
-    def sample_numpy(self, n: int) -> np.ndarray:
-        return self._kde.resample(size=n, seed=self._rng)[0]
+    def sample_numpy(self, n: int, forked: bool = False) -> np.ndarray:
+        rng = self._fork_rng if forked else self._rng
+        return self._kde.resample(size=n, seed=rng)[0]
 
     def copy(self) -> "GaussianKdeRV":
         return GaussianKdeRV(discrete=self._discrete, kde=self._kde)

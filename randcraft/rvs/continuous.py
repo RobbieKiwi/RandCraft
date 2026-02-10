@@ -12,7 +12,7 @@ class ContinuousRV(RV, ABC):
     def calculate_pdf(self, x: np.ndarray) -> ProbabilityDensityFunction: ...
 
     @abstractmethod
-    def ppf(self, x: np.ndarray) -> Uncertainty[np.ndarray]: ...
+    def ppf(self, q: np.ndarray) -> Uncertainty[np.ndarray]: ...
 
     def calculate_pmf(self) -> None:
         return None
@@ -34,7 +34,7 @@ class ContinuousRV(RV, ABC):
         return ScaledRV(inner=self.copy(), algebraic_function=AlgebraicFunction(offset=x))
 
 
-class ScaledRV(ContinuousRV):  # TODO Add checks to cdf and ppf stuff
+class ScaledRV(ContinuousRV):
     def __init__(self, inner: ContinuousRV, algebraic_function: AlgebraicFunction) -> None:
         self._inner = inner
         self._af = algebraic_function
@@ -64,8 +64,8 @@ class ScaledRV(ContinuousRV):  # TODO Add checks to cdf and ppf stuff
     def cdf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
         return self.inner.cdf(self.algebraic_function.apply_inverse(x))
 
-    def ppf(self, x: np.ndarray) -> Uncertainty[np.ndarray]:
-        return self.inner.ppf(x).apply(self.algebraic_function.apply)
+    def ppf(self, q: np.ndarray) -> Uncertainty[np.ndarray]:
+        return self.inner.ppf(q).apply(self.algebraic_function.apply)
 
     def scale(self, x: float) -> "ScaledRV":
         return ScaledRV(inner=self.inner, algebraic_function=self.algebraic_function * x)
@@ -73,8 +73,8 @@ class ScaledRV(ContinuousRV):  # TODO Add checks to cdf and ppf stuff
     def add_constant(self, x: float) -> "ScaledRV":
         return ScaledRV(inner=self.inner, algebraic_function=self.algebraic_function + x)
 
-    def sample_numpy(self, n: int) -> np.ndarray:
-        return self.algebraic_function.apply(self.inner.sample_numpy(n))
+    def sample_numpy(self, n: int, forked: bool = False) -> np.ndarray:
+        return self.algebraic_function(self.inner.sample_numpy(n=n, forked=forked))
 
     def _get_plot_range(self) -> tuple[float, float]:
         return self.algebraic_function.apply_on_range(self.inner._get_plot_range())

@@ -16,7 +16,7 @@ norm = make_normal(mean=0, std_dev=0.2)
 # <RandomVariable(normal): mean=0.0, var=0.04>
 combined = coin_flip + norm 
 # <RandomVariable(mixture): mean=0.5, var=0.29>
-combined.sample_one()
+combined.sample()
 # 0.8678903828104276
 combined.plot()
 ```
@@ -24,7 +24,7 @@ combined.plot()
 
 ## Features
 
-- **Distribution composition:** Scale random variables and add them together `rvc = rva/2 + rvb`
+- **Distribution composition:** Scale random variables and add them together `rvc = rva/2 + rvb`. Apply arbitrary functions.
 - **Plot distributions** Quickly have a look at the distribution of any RV (including combinations etc) with `rv.plot()`
 - **Object-oriented:** RVs are objects, useful stats like mean/variance etc can be accessed with dot notation
 - **Sampling and statistics:** Easily sample from composed distributions and access computed statistics
@@ -63,7 +63,8 @@ uv add randcraft
 - `make_normal`, `make_uniform` ...etc: Create a random variable
 - Addition subtraction with constants or other RVs: `+`, `-`
 - Division by constant to scale RV values
-- `.sample_numpy(size)`: Draw samples
+- `.sample()`: Draw 1 sample (float)
+- `.sample(n)`: Draw n samples (np.ndarray)
 - `.get_mean()`, `.get_variance()`: Get statistics
 - `.cdf(x)`: Evaluate cdf at points
 - `.ppf(x)`: Evaluate inverse of cdf at points
@@ -84,7 +85,7 @@ three_dice.ppf(0.5)
 # 10.0
 ```
 
-### Using arbitrary parametric continuous distribution from scipy.stats
+### Using parametric continuous distribution from scipy.stats
 ```python
 from scipy.stats import uniform
 from randcraft.constructors import make_scipy
@@ -146,6 +147,21 @@ mixed.plot()
 ```
 ![Mixture](https://github.com/RobbieKiwi/RandCraft/blob/f701111797b1904901bbf6fe9a62620327d5ebcf/images/mixture.png?raw=true)
 
+## Applying arbitrary functions
+You can apply any function of the form (np.ndarray[float] -> np.ndarray[float]) to a random variable.
+Stats and plotting etc will be estimated numerically
+
+```python
+rv = make_coin_flip()
+# <RandomVariable(discrete): mean=0.5, var=0.25>
+rv_2 = apply_func_to_discrete_rv(rv=rv, func=lambda x: x * 2 - 1)
+# <RandomVariable(anon): mean=0.0, var=1.66>
+rv_2.get_mean()
+# np.float64(0.0)
+values = rv_2.sample(5)
+# array([-1., -1.,  1., -1.,  1.])
+```
+
 ### Seed RVs for deterministic behaviour
 ```python
 from randcraft.constructors import make_normal
@@ -155,7 +171,7 @@ rv1 = make_normal(mean=0.0, std_dev=1.0, seed=3)
 # <RandomVariable(scipy-norm): mean=0.0, var=1.0, seeded>
 rv2 = make_normal(mean=0.0, std_dev=1.0, seed=3)
 # <RandomVariable(scipy-norm): mean=0.0, var=1.0, seeded>
-np.array_equal(rv2a.sample_numpy(10), rv2b.sample_numpy(10))
+np.array_equal(rv2a.sample(10), rv2b.sample(10))
 # True
 ```
 
