@@ -57,7 +57,8 @@ pip install randcraft
 - `make_normal`, `make_uniform` ...etc: Create a random variable
 - Addition subtraction with constants or other RVs: `+`, `-`
 - Division by constant to scale RV values
-- `.sample_numpy(size)`: Draw samples
+- `.sample()`: Draw 1 sample (float)
+- `.sample(n)`: Draw n samples (np.ndarray)
 - `.get_mean()`, `.get_variance()`: Get statistics
 - `.cdf(x)`: Evaluate cdf at points
 - `.ppf(x)`: Evaluate inverse of cdf at points

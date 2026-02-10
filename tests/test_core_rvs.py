@@ -13,7 +13,7 @@ class TestCoreRvs(TestCase):
 
         rv = make_normal(mean=mean, std_dev=std_dev)
 
-        sample = rv.sample_one()
+        sample = rv.sample()
         self.assertIsInstance(sample, float)
 
         self.assertEqual(rv.get_mean(exact=True), mean)
@@ -28,10 +28,10 @@ class TestCoreRvs(TestCase):
 
         rv = make_uniform(low=low, high=high)
 
-        sample = rv.sample_one()
+        sample = rv.sample()
         self.assertIsInstance(sample, float)
 
-        samples = rv.sample_numpy(n=100)
+        samples = rv.sample(n=100)
         self.assertIsInstance(samples, np.ndarray)
         self.assertEqual(samples.shape, (100,))
         self.assertGreaterEqual(min(samples), low)
@@ -49,12 +49,12 @@ class TestCoreRvs(TestCase):
 
         rv = make_beta(a=a, b=b)
 
-        sample = rv.sample_one()
+        sample = rv.sample()
         self.assertIsInstance(sample, float)
         self.assertGreaterEqual(sample, 0.0)
         self.assertLessEqual(sample, 1.0)
 
-        samples = rv.sample_numpy(n=100)
+        samples = rv.sample(n=100)
         self.assertIsInstance(samples, np.ndarray)
         self.assertEqual(samples.shape, (100,))
         self.assertGreaterEqual(min(samples), 0.0)
@@ -72,11 +72,11 @@ class TestCoreRvs(TestCase):
 
         rv = make_gamma(a=shape, scale=scale)
 
-        sample = rv.sample_one()
+        sample = rv.sample()
         self.assertIsInstance(sample, float)
         self.assertGreaterEqual(sample, 0.0)
 
-        samples = rv.sample_numpy(n=100)
+        samples = rv.sample(n=100)
         self.assertIsInstance(samples, np.ndarray)
         self.assertEqual(samples.shape, (100,))
         self.assertGreaterEqual(min(samples), 0.0)
@@ -91,7 +91,7 @@ class TestCoreRvs(TestCase):
 
         rv = make_dirac(value=value)
 
-        sample = rv.sample_one()
+        sample = rv.sample()
         self.assertEqual(sample, value)
 
         self.assertEqual(rv.get_mean(exact=True), value)
@@ -106,7 +106,7 @@ class TestCoreRvs(TestCase):
 
         rv = make_discrete(values=values, probabilities=probabilities)
 
-        sample = rv.sample_numpy(n=100)
+        sample = rv.sample(n=100)
         self.assertIsInstance(sample, np.ndarray)
         self.assertEqual(sample.shape, (100,))
         self.assertTrue(np.all(np.isin(sample, values)))

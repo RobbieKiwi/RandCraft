@@ -22,7 +22,7 @@ def add_special_event_to_rv(rv: RandomVariable, value: float, chance: float, see
 
 def apply_func_to_continuous_rv(rv: RandomVariable, func: Callable[[np.ndarray], np.ndarray], n_observations: int = 500) -> RandomVariable:
     def sampler(n: int) -> np.ndarray:
-        return func(rv.sample_numpy(n=n))
+        return func(rv.sample(n=n))
 
     def stat_sampler(n: int) -> np.ndarray:
         return func(rv._sample_forked(n=n))
@@ -33,7 +33,7 @@ def apply_func_to_continuous_rv(rv: RandomVariable, func: Callable[[np.ndarray],
 def apply_func_to_discrete_rv(rv: RandomVariable, func: Callable[[np.ndarray], np.ndarray], n_observations: int = 500) -> RandomVariable:
     # Note that this will convert the discrete RV to a continuous one
     def sampler(n: int) -> np.ndarray:
-        return func(rv.sample_numpy(n=n))
+        return func(rv.sample(n=n))
 
     def stat_sampler(n: int) -> np.ndarray:
         return func(rv._sample_forked(n=n))

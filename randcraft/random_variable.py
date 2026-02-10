@@ -98,11 +98,16 @@ class RandomVariable:
             return self._rv.ppf(q=value).get(name="ppf", certain=exact)
         return self.ppf(value=np.array([value]))[0]
 
-    def sample_numpy(self, n: int) -> np.ndarray:
-        return self._rv.sample_numpy(n=n)
+    @overload
+    def sample(self, n: int) -> np.ndarray: ...
 
-    def sample_one(self) -> float:
-        return self.sample_numpy(1).tolist()[0]
+    @overload
+    def sample(self, n: None = None) -> float: ...
+
+    def sample(self, n: int | None = None) -> float | np.ndarray:
+        if n is None:
+            return self._rv.sample_numpy(n=1).item()
+        return self._rv.sample_numpy(n=n)
 
     def scale(self, factor: float) -> "RandomVariable":
         if factor == 0.0:
@@ -154,3 +159,6 @@ class RandomVariable:
     def _sample_forked(self, n: int) -> np.ndarray:
         # Observe the random variable without changing it's state
         return self._rv.sample_numpy(n=n, forked=True)
+
+    sample_numpy = sample
+    sample_one = sample

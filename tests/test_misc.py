@@ -33,7 +33,7 @@ class TestMisc(BaseTestCase):
             return x * 2.0
 
         rv2a = apply_func_to_continuous_rv(rv=rva, func=double)
-        self.assertTrue(np.array_equal(rv0.sample_numpy(10) * 2, rv2a.sample_numpy(10)))
+        self.assertTrue(np.array_equal(rv0.sample(10) * 2, rv2a.sample(10)))
 
     def test_apply_discrete(self) -> None:
         rv0 = make_coin_flip(seed=2)
@@ -43,4 +43,4 @@ class TestMisc(BaseTestCase):
             return x * 2.0
 
         rv2a = apply_func_to_discrete_rv(rv=rva, func=double)
-        self.assertTrue(np.array_equal(rv0.sample_numpy(10) * 2, rv2a.sample_numpy(10)))
+        self.assertTrue(np.array_equal(rv0.sample(10) * 2, rv2a.sample(10)))
