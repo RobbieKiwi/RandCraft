@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Literal, Self
+from typing import TYPE_CHECKING, Literal, Self
 
-import matplotlib.pyplot as plt
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
 import numpy as np
-from matplotlib.axes import Axes
 from scipy.integrate import cumulative_trapezoid
 
 from randcraft.models import ProbabilityDensityFunction, ProbabilityMassFunction, Statistics, Uncertainty, maybe
@@ -94,6 +94,8 @@ class RV(ABC):
         return [self._seed]
 
     def plot(self, kind: PdfPlotType = "both") -> None:
+        import matplotlib.pyplot as plt
+
         start, end = self._get_plot_range()
         discrete_points = self._get_discrete_points()
         x = np.linspace(start, end, 1000)
