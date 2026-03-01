@@ -9,6 +9,8 @@ from randcraft.random_variable import RandomVariable
 from randcraft.rvs.discrete import DiscreteRV
 from randcraft.rvs.gaussian_kde import GaussianKdeRV
 
+__all__ = ["make_gaussian_kde", "reduce_observations", "make_discrete_rv_from_observations"]
+
 logger = logging.getLogger(__name__)
 
 

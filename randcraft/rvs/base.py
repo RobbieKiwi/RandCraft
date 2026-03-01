@@ -1,10 +1,8 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Literal, Self
+from typing import Any, Literal, Self
 
-import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
 from scipy.integrate import cumulative_trapezoid
 
 from randcraft.models import ProbabilityDensityFunction, ProbabilityMassFunction, Statistics, Uncertainty, maybe
@@ -94,6 +92,9 @@ class RV(ABC):
         return [self._seed]
 
     def plot(self, kind: PdfPlotType = "both") -> None:
+        import matplotlib.pyplot as plt
+        from matplotlib.axes import Axes
+
         start, end = self._get_plot_range()
         discrete_points = self._get_discrete_points()
         x = np.linspace(start, end, 1000)
@@ -156,7 +157,10 @@ class RV(ABC):
             buffer = max(1.0, abs(self.mean))
         return start - buffer, end + buffer
 
-    def plot_pdf_on_axis(self, ax: Axes, x: np.ndarray) -> None:
+    def plot_pdf_on_axis(self, ax: Any, x: np.ndarray) -> None:
+        from matplotlib.axes import Axes
+
+        assert isinstance(ax, Axes)
         cont_pdf = self.calculate_pdf(x)
         if cont_pdf is not None:
             ax.plot(cont_pdf.x, cont_pdf.y)
@@ -168,7 +172,10 @@ class RV(ABC):
                 ax.scatter(x, p, color="C0", s=50, zorder=5)
         return
 
-    def plot_cdf_on_axis(self, ax: Axes, x: np.ndarray) -> None:
+    def plot_cdf_on_axis(self, ax: Any, x: np.ndarray) -> None:
+        from matplotlib.axes import Axes
+
+        assert isinstance(ax, Axes)
         y = self.cdf(x).value
         ax.plot(x, y)
 
